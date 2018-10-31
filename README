@@ -36,6 +36,56 @@ INSTALLATION
 
   $ onyphe
 
+EXAMPLES
+
+  # Query your user profile to get your remaining credits
+  $ onyphe -simple user -fields credits
+
+  # Or full profile information
+  $ onyphe -simple user
+
+  #
+  # Query the simple API
+  # See https://www.onyphe.io/documentation/api for more APIs
+  #
+
+  # Search reverse DNS information
+  $ onyphe -simple reverse -value 8.8.8.8
+
+  # Search data from free text and remove data field
+  $ onyphe -simple datascan -value 'WD My Cloud' -fields -data
+
+  # Get a summary of information from an IP address and remove data field
+  $ onyphe -simple ip -value 8.8.8.8 -fields -data
+
+  #
+  # Query the search API (need subscription, see https://www.onyphe.io/pricing)
+  # See https://www.onyphe.io/documentation/api for more APIs
+  #
+
+  # Search for some NGINX products and encode data field as Base64
+  $ onyphe -search 'category:datascan product:NGINX' -encode data
+
+  # Just display useful information to you
+  $ onyphe -search 'category:datascan product:NGINX' \
+     -fields ip,port,tls,product,productversion,cpe
+
+  # Or remove unwanted fields
+  $ onyphe -search 'category:datascan product:NGINX' -fields -data
+
+  # Autoscroll through all results
+  # !!!WARNING: may consume up to 1000 credits
+  $ onyphe -search 'category:datascan product:NGINX' \
+     -fields ip,port,tls,product,productversion,cpe -autoscroll 1
+
+  # Autoscroll feature but limit the number of pages to scroll
+  $ onyphe -search 'category:datascan product:NGINX' \
+     -fields ip,port,tls,product,productversion,cpe -autoscroll 1 -maxpage 10
+
+  # Save Mirai threatlist information from yesterday results as CSV output
+  $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' \
+     -fields subnet,tag -autoscroll 1 -verbose 0 -output csv > mirai.csv
+
 COPYRIGHT AND LICENSE
 
    Copyright (c) 2018, ONYPHE
