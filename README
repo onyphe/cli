@@ -1,0 +1,45 @@
+Metabrik::Client::Onyphe
+========================
+
+   Official client to access the ONYPHE API.
+
+   To know more: https://www.onyphe.io/
+
+INSTALLATION
+
+  First, install all dependencies (Ubuntu/Debian systems):
+
+  $ sudo apt install -y build-essential less cpanminus libreadline-dev coreutils \
+     libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev procps aptitude
+
+  Second, install Metabrik and its Repository:
+
+  $ sudo cpanm -n Metabrik Metabrik::Repository
+
+  Third, install api::onyphe Brik:
+
+  $ sudo perl -MMetabrik::Core::Context -e \
+     'Metabrik::Core::Context->new_brik_run("brik::tool","install","api::onyphe")'
+
+  Then, install this module by typing the following:
+
+  $ perl Makefile.PL
+  $ make
+  $ make test
+  $ sudo make install
+
+  Finally, set your API key in the configuration file:
+
+  $ echo '<APIKEY>' > ~/.onyphe_rc
+
+  Enjoy:
+
+  $ onyphe
+
+COPYRIGHT AND LICENSE
+
+   Copyright (c) 2018, ONYPHE
+
+   You may distribute this module under the terms of The BSD 3-Clause License.
+   See LICENSE file in the source distribution archive.
+
