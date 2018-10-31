@@ -1,1 +1,181 @@
+#!/usr/bin/perl
+#
+# $Id: onyphe,v 38b572aeb0c6 2018/10/30 17:21:39 gomor $
+#
+use strict;
+use warnings;
 
+use Getopt::Long;
+use Metabrik::Client::Onyphe;
+
+# Default values
+my %lopts = (
+   verbose => 1,
+   onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
+   output => 'psv',
+   page => '1',
+   autoscroll => '0',
+);
+
+# Option parsing
+GetOptions(
+   "simple=s" => \$lopts{simple},
+   "value=s" => \$lopts{value},
+   "search=s" => \$lopts{search},
+   "verbose=i" => \$lopts{verbose},
+   "apikey=s" => \$lopts{apikey},
+   "output=s" => \$lopts{output},
+   "fields=s" => \$lopts{fields},
+   "encode=s" => \$lopts{encode},
+   "page=i" => \$lopts{page},
+   "maxpage=i" => \$lopts{maxpage},
+   "autoscroll=i" => \$lopts{autoscroll},
+) or usage();
+
+# Load API key from onyphe rc file
+load_onyphe_rc(%lopts);
+
+# Sanity checks
+sanity_checks(%lopts);
+
+# Ready to rock
+my $cli = Metabrik::Client::Onyphe->new_brik_init;
+$cli->log->level($lopts{verbose});
+$cli->apikey($lopts{apikey});
+$cli->autoscroll($lopts{autoscroll} ? 1 : 0);
+
+# Launch query
+my $r;
+if ($lopts{search}) {   # Search API query mode
+   $r = $cli->search($lopts{search}, $lopts{page}, $lopts{maxpage})
+      or $cli->log->fatal("search: aborted");
+}
+else {  # Simple API query mode
+   my $simple = $lopts{simple};
+   my $value = $lopts{value};
+   $r = $cli->simple($simple, $value, $lopts{page}, $lopts{maxpage})
+      or $cli->log->fatal("simple: aborted");
+}
+
+# Output results
+my $output_mode = 'output_'.$lopts{output};
+my $output = $cli->$output_mode($r, $lopts{fields}, $lopts{encode});
+if (! defined($output)) {
+   $cli->log->fatal("$output_mode: aborted");
+}
+print $output;
+
+exit(0);
+
+#
+# Local subroutines
+#
+
+sub usage {
+   print<<EOF
+
+Usage: onyphe [options] "category:CATEGORY SEARCH"
+
+   -apikey <APIKEY>                        your personal ONYPHE API key
+   -search <SEARCH>                        use search API for query
+   -simple <API>                           use simple API for query (need -value)
+   -value <VALUE>                          value to use when using simple API
+   -output <MODE>                          output mode (default: psv)
+                                           Modes: dump, csv, psv
+   -page <PAGE>                            fetch results for page (default: 1)
+   -autoscroll <0|1>                       use autoscroll feature (default: 0)
+                                           WARNING: may consume a lot of credit
+   -maxpage <MAXPAGE>                      max page to fetch in autoscroll mode
+   -fields <-|+><FIELD1,FIELD2,...FIELDn>  comma separated list of fields to display (+)
+                                           or remove (-) from output
+   -encode <FIELD1,FIELD2,...FIELDn>       comma separated list of fields to Base64 encode
+   -verbose <0|1|2|3>                      verbosity level (default: 1)
+
+EOF
+;
+
+   exit(0);
+}
+
+sub load_onyphe_rc {
+   my ($lopts) = @_;
+
+   if (-f $lopts{onyphe_rc}) {
+      open(my $in, '<', $lopts{onyphe_rc})
+         or die("ERROR: open: ".$lopts{onyphe_rc}.": failed: $!");
+      chomp(my $apikey = <$in>);
+      if (length($apikey) && $apikey =~ m{^[a-z0-9]{40}$}) {
+         $lopts{apikey} = $apikey;
+      }
+      else {
+         die("ERROR: apikey [$apikey] invalid format found in ".$lopts{onyphe_rc}.
+            " file");
+      }
+      close($in);
+   }
+
+   return 1;
+}
+
+sub sanity_checks {
+   my ($lopts) = @_;
+
+   if (! defined($lopts{search}) && ! defined($lopts{simple})) {
+      print "ERROR: -search or -simple argument missing\n";
+      usage();
+   }
+
+   if (! defined($lopts{apikey})) {
+      print "ERROR: -apikey argument missing\n";
+      usage();
+   }
+
+   if ($lopts{simple} && $lopts{simple} ne 'user' && ! defined($lopts{value})) {
+      print "ERROR: -simple argument used but -value argument missing\n";
+      usage();
+   }
+
+   if (! $lopts{simple} && defined($lopts{value})) {
+      print "ERROR: -simple argument missing but -value argument used\n";
+      usage();
+   }
+
+   if ($lopts{output} !~ m{^(?:csv|psv|dump)$}) {
+      print "ERROR: invalid output chosen: ".$lopts{output}."\n";
+      usage();
+   }
+
+   if ($lopts{page} !~ m{^\d+$}) {
+      print "ERROR: invalid page chosen: ".$lopts{page}."\n";
+      usage();
+   }
+
+   if (defined($lopts{maxpage}) && $lopts{maxpage} !~ m{^\d+$}) {
+      print "ERROR: invalid maxpage chosen: ".$lopts{maxpage}."\n";
+      usage();
+   }
+
+   if ($lopts{verbose} !~ m{^\d+$}) {
+      print "ERROR: invalid verbose mode chosen: ".$lopts{verbose}."\n";
+      usage();
+   }
+
+   return 1;
+}
+
+1;
+
+__END__
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2018, ONYPHE
+
+You may distribute this module under the terms of The BSD 3-Clause License.
+See LICENSE file in the source distribution archive.
+
+=head1 AUTHOR
+
+ONYPHE
+
+=cut
