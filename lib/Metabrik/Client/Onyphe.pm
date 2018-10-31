@@ -1,5 +1,5 @@
 #
-# $Id: Onyphe.pm,v b753b43de9a5 2018/10/30 17:30:51 gomor $
+# $Id: Onyphe.pm,v 867487862063 2018/10/31 08:58:01 gomor $
 #
 package Metabrik::Client::Onyphe;
 use strict;
@@ -11,7 +11,7 @@ use base qw(Metabrik);
 
 sub brik_properties {
    return {
-      revision => '$Revision: b753b43de9a5 $',
+      revision => '$Revision: 867487862063 $',
       tags => [ qw(unstable) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
@@ -84,7 +84,7 @@ sub simple {
    my $results = $ao->$api($value, $apikey, $page) or return;
    push @r, @$results;
 
-   $maxpage ||= $results->[0]{max_page};
+   $maxpage ||= $results->[0]{max_page} || 1;
    $self->log->verbose("simple: maxpage is [$maxpage]");
 
    $self->log->info("simple: page [$page/$maxpage] fetched");
