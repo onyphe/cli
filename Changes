@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.02 Fri  2 Nov 15:23:11 CET 2018
+   - update: set HTTP user agent to Metabrik::Client::Onyphe
+
 1.01 Fri  2 Nov 12:04:38 CET 2018
    - new: capability to perform pipelined searches like in a UNIX shell from -search argument
 
