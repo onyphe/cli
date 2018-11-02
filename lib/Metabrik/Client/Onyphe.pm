@@ -1,17 +1,17 @@
 #
-# $Id: Onyphe.pm,v 538a181cc8be 2018/11/02 11:01:18 gomor $
+# $Id: Onyphe.pm,v 6947bc4a31a3 2018/11/02 11:06:18 gomor $
 #
 package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 use base qw(Metabrik);
 
 sub brik_properties {
    return {
-      revision => '$Revision: 538a181cc8be $',
+      revision => '$Revision: 6947bc4a31a3 $',
       tags => [ qw(unstable) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
