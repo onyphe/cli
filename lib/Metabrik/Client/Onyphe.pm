@@ -1,17 +1,17 @@
 #
-# $Id: Onyphe.pm,v 6947bc4a31a3 2018/11/02 11:06:18 gomor $
+# $Id: Onyphe.pm,v 12c4e1d3f32c 2018/11/02 14:24:52 gomor $
 #
 package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 use base qw(Metabrik);
 
 sub brik_properties {
    return {
-      revision => '$Revision: 6947bc4a31a3 $',
+      revision => '$Revision: 12c4e1d3f32c $',
       tags => [ qw(unstable) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
@@ -49,6 +49,7 @@ sub brik_init {
    my $self = shift;
 
    my $ao = Metabrik::Api::Onyphe->new_from_brik_init($self) or return;
+   $ao->user_agent("Metabrik::Client::Onyphe v$VERSION");
    $self->_ao($ao);
 
    my $sb = Metabrik::String::Base64->new_from_brik_init($self) or return;
@@ -178,7 +179,9 @@ sub function_where {
       for my $this (@{$page->{results}}) {
          # Update where clause with placeholder values
          my $copy = $where;
-         while ($copy =~ s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$this->{$2}]}}) {}
+         while ($copy =~ s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$this->{$2}]}}) {
+            $self->log->debug("function_where: copy[$copy] field1[$1] field2[".$this->{$2}."]");
+         }
          my $this_r = $self->search($copy) or return;
          if ($this_r->[0]{count} > 0) {  # Check only first page of results.
             push @new, $this;            # Keep this result if matches were found.
