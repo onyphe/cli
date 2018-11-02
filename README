@@ -16,17 +16,17 @@ INSTALLATION
 
   $ sudo cpanm -n Metabrik Metabrik::Repository
 
-  Third, install api::onyphe Brik:
-
-  $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool","install","api::onyphe")'
-
-  Then, install this module by typing the following:
+  Third, install this module by typing the following:
 
   $ perl Makefile.PL
   $ make
   $ make test
   $ sudo make install
+
+  Fourth, install api::onyphe Brik:
+
+  $ sudo perl -MMetabrik::Core::Context -e \
+     'Metabrik::Core::Context->new_brik_run("brik::tool","install","api::onyphe")'
 
   Finally, set your API key in the configuration file:
 
@@ -74,7 +74,7 @@ EXAMPLES
   $ onyphe -search 'category:datascan product:NGINX' -fields -data
 
   # Autoscroll through all results
-  # !!!WARNING: may consume up to 1000 credits
+  # !!! WARNING: may consume up to 1,000 credits
   $ onyphe -search 'category:datascan product:NGINX' \
      -fields ip,port,tls,product,productversion,cpe -autoscroll 1
 
@@ -85,6 +85,13 @@ EXAMPLES
   # Save Mirai threatlist information from yesterday results as CSV output
   $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' \
      -fields subnet,tag -autoscroll 1 -verbose 0 -output csv > mirai.csv
+
+  # Execute a where clause to return results that match criterias from another query
+  # Here, we want to find modbus devices which also have a Web interface.
+  # !!! WARNING: may consume up to 11,000 credits.
+  $ onyphe -autoscroll 1 -fields ip,port,protocol,datamd5 \
+       -search 'category:datascan protocol:modbus -dayago:1 \
+     | -where category:datascan protocol:http ip:$ip' \
 
 COPYRIGHT AND LICENSE
 
