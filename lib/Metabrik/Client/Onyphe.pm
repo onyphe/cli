@@ -1,5 +1,5 @@
 #
-# $Id: Onyphe.pm,v 867487862063 2018/10/31 08:58:01 gomor $
+# $Id: Onyphe.pm,v 538a181cc8be 2018/11/02 11:01:18 gomor $
 #
 package Metabrik::Client::Onyphe;
 use strict;
@@ -11,7 +11,7 @@ use base qw(Metabrik);
 
 sub brik_properties {
    return {
-      revision => '$Revision: 867487862063 $',
+      revision => '$Revision: 538a181cc8be $',
       tags => [ qw(unstable) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
@@ -29,6 +29,7 @@ sub brik_properties {
       commands => {
          simple => [ qw(api value page|OPTIONAL maxpage|OPTIONAL) ],
          search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
+         search_where => [ qw(query where page|OPTIONAL maxpage|OPTIONAL) ],
          output_dump => [ qw(results) ],
          output => [ qw(
             results fields|OPTIONAL encode|OPTIONAL separator|OPTIONAL cb|OPTIONAL
@@ -160,6 +161,96 @@ sub search {
    }
 
    return \@r;
+}
+
+sub function_where {
+   my $self = shift;
+   my ($r, $where) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('function_where', $r) or return;
+   $self->brik_help_run_invalid_arg('function_where', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('function_where', $where) or return;
+
+   my @new = ();
+   for my $page (@$r) {
+      for my $this (@{$page->{results}}) {
+         # Update where clause with placeholder values
+         my $copy = $where;
+         while ($copy =~ s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$this->{$2}]}}) {}
+         my $this_r = $self->search($copy) or return;
+         if ($this_r->[0]{count} > 0) {  # Check only first page of results.
+            push @new, $this;            # Keep this result if matches were found.
+         }
+      }
+   }
+
+   # Return new result set.
+   return [ {
+      %{$r->[0]},            # Keep results information from first page only
+      count => scalar(@new), # Overwrite count value
+      results => \@new,      # Overwrite results value
+   } ];
+}
+
+# Not ready to be integrated, need to integrate -fields too and all onyphe program arguments.
+#sub function_output {
+#   my $self = shift;
+#   my ($r, $format) = @_;
+
+#   my $apikey = $self->apikey;
+#   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+#   $self->brik_help_run_undef_arg('function_output', $r) or return;
+#   $self->brik_help_run_invalid_arg('function_output', $r, 'ARRAY') or return;
+#   $self->brik_help_run_undef_arg('function_output', $format) or return;
+
+#   my $function = 'output_'.$format;
+#   if (! $self->can($function)) {
+#      return $self->log->error("function_output: invalid output format [$format]");
+#   }
+
+#   return $self->$function($r);
+#}
+
+sub search_pipeline {
+   my $self = shift;
+   my ($pipeline, $page, $maxpage) = @_;
+
+   $page ||= 1;
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('search_pipeline', $pipeline) or return;
+
+   my @cmd = split(/\s*\|\s*-/, $pipeline);
+   if (@cmd == 0) {
+      return $self->log->error("search_pipeline: no search command found");
+   }
+
+   # First one is hopefully a search query
+   my $search = shift @cmd;
+   $self->log->verbose("search_pipeline: search[$search]");
+   my $r = $self->search($search, $page, $maxpage) or return;
+
+   # And others are the pipelined commands
+   for my $this (@cmd) {
+      $self->log->verbose("search_pipeline: cmd[$this]");
+      my @function = $this =~ m{^(\w+)\s+(.+)$};
+      my $function = 'function_'.$function[0];
+      my $argument = $function[1];
+      if (! $self->can($function)) {
+         $self->log->error("search_pipeline: unknown function [$function[0]]");
+         return $r;
+      }
+      if (! defined($argument) || ! length($argument)) {
+         $self->log->error("search_pipeline: unknown argument [$argument]");
+         return $r;
+      }
+      $self->log->verbose("search_pipeline: function[$function] argument[$argument]");
+      $r = $self->$function($r, $argument) or return;
+   }
+
+   return $r;
 }
 
 sub _rec_header_from_result {
@@ -414,6 +505,14 @@ Use simple API for queries.
 =item B<search>
 
 Use search API for queries.
+
+=item B<function_where>
+
+Use the where where on results returned from the search API.
+
+=item B<search_pipeline>
+
+Perform a search query by using | separated list of functions.
 
 =item B<output_dump>
 
