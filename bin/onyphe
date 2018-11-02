@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: onyphe,v 38b572aeb0c6 2018/10/30 17:21:39 gomor $
+# $Id: onyphe,v d0c5504be5e2 2018/11/02 11:00:22 gomor $
 #
 use strict;
 use warnings;
@@ -46,9 +46,9 @@ $cli->autoscroll($lopts{autoscroll} ? 1 : 0);
 
 # Launch query
 my $r;
-if ($lopts{search}) {   # Search API query mode
-   $r = $cli->search($lopts{search}, $lopts{page}, $lopts{maxpage})
-      or $cli->log->fatal("search: aborted");
+if ($lopts{search}) {   # Search API query mode with pipeline support
+   $r = $cli->search_pipeline($lopts{search}, $lopts{page}, $lopts{maxpage})
+      or $cli->log->fatal("search_pipeline: aborted");
 }
 else {  # Simple API query mode
    my $simple = $lopts{simple};
@@ -74,7 +74,8 @@ exit(0);
 sub usage {
    print<<EOF
 
-Usage: onyphe [options] "category:CATEGORY SEARCH"
+Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
+       onyphe [options] -simple API -value VALUE
 
    -apikey <APIKEY>                        your personal ONYPHE API key
    -search <SEARCH>                        use search API for query
