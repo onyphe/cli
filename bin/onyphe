@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: onyphe,v d0c5504be5e2 2018/11/02 11:00:22 gomor $
+# $Id: onyphe,v d629ccff5f0c 2018/12/03 12:59:47 gomor $
 #
 use strict;
 use warnings;
@@ -15,6 +15,7 @@ my %lopts = (
    output => 'psv',
    page => '1',
    autoscroll => '0',
+   apiurl => 'https://www.onyphe.io/api',
 );
 
 # Option parsing
@@ -30,6 +31,7 @@ GetOptions(
    "page=i" => \$lopts{page},
    "maxpage=i" => \$lopts{maxpage},
    "autoscroll=i" => \$lopts{autoscroll},
+   "apiurl=s" => \$lopts{apiurl},
 ) or usage();
 
 # Load API key from onyphe rc file
@@ -42,6 +44,7 @@ sanity_checks(%lopts);
 my $cli = Metabrik::Client::Onyphe->new_brik_init;
 $cli->log->level($lopts{verbose});
 $cli->apikey($lopts{apikey});
+$cli->apiurl($lopts{apiurl});
 $cli->autoscroll($lopts{autoscroll} ? 1 : 0);
 
 # Launch query
@@ -82,7 +85,7 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
    -simple <API>                           use simple API for query (need -value)
    -value <VALUE>                          value to use when using simple API
    -output <MODE>                          output mode (default: psv)
-                                           Modes: dump, csv, psv
+                                           Modes: dump, csv, psv, json
    -page <PAGE>                            fetch results for page (default: 1)
    -autoscroll <0|1>                       use autoscroll feature (default: 0)
                                            WARNING: may consume a lot of credit
@@ -100,6 +103,11 @@ EOF
 
 sub load_onyphe_rc {
    my ($lopts) = @_;
+
+   # If already given from command line, do not read rc file for apikey
+   if (length($lopts{apikey})) {
+      return 1;
+   }
 
    if (-f $lopts{onyphe_rc}) {
       open(my $in, '<', $lopts{onyphe_rc})
@@ -141,7 +149,7 @@ sub sanity_checks {
       usage();
    }
 
-   if ($lopts{output} !~ m{^(?:csv|psv|dump)$}) {
+   if ($lopts{output} !~ m{^(?:csv|psv|dump|json)$}) {
       print "ERROR: invalid output chosen: ".$lopts{output}."\n";
       usage();
    }
