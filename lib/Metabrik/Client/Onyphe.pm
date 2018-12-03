@@ -1,17 +1,17 @@
 #
-# $Id: Onyphe.pm,v 12c4e1d3f32c 2018/11/02 14:24:52 gomor $
+# $Id: Onyphe.pm,v d629ccff5f0c 2018/12/03 12:59:47 gomor $
 #
 package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 use base qw(Metabrik);
 
 sub brik_properties {
    return {
-      revision => '$Revision: 12c4e1d3f32c $',
+      revision => '$Revision: d629ccff5f0c $',
       tags => [ qw(unstable) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
@@ -36,11 +36,14 @@ sub brik_properties {
          ) ],
          output_csv => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
          output_psv => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
+         output_json => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
-         'Metabrik::String::Base64' => [ ],
          'Metabrik::Api::Onyphe' => [ ],
+         'Metabrik::File::Csv' => [ ],
+         'Metabrik::String::Base64' => [ ],
+         'Metabrik::String::Json' => [ ],
       },
    };
 }
@@ -67,7 +70,10 @@ sub simple {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('simple', $api) or return;
 
+   my $apiurl = $self->apiurl;
+
    my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
 
    if (! $ao->can($api)) {
       return $self->log->error("simple: api [$api] unknown");
@@ -119,7 +125,10 @@ sub search {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('search', $query) or return;
 
+   my $apiurl = $self->apiurl;
+
    my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
 
    if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
       return $self->log->error("search: please start your search with ".
@@ -138,6 +147,10 @@ sub search {
 
    my @r = ();
    my $results = $ao->$api($search, $apikey, $page) or return;
+   if (ref($results) ne 'ARRAY') {
+      return $self->log->error("search: not an ARRAY [".Data::Dumper::Dumper($results).
+         "]");
+   }
    push @r, @$results;
 
    $maxpage ||= $results->[0]{max_page};
@@ -164,6 +177,23 @@ sub search {
    return \@r;
 }
 
+sub _value {
+   my $self = shift;
+   my ($h, $field) = @_;
+
+   my @words = split(/\./, $field);
+   my $value = $h->{$words[0]};
+   for (1..$#words) {
+      $value = $value->{$words[$_]};
+   }
+
+   if (! defined($value)) {
+      return $self->log->error("value: no value found for field [$field]");
+   }
+
+   return $value;
+}
+
 sub function_where {
    my $self = shift;
    my ($r, $where) = @_;
@@ -175,16 +205,209 @@ sub function_where {
    $self->brik_help_run_undef_arg('function_where', $where) or return;
 
    my @new = ();
+
+   my $return = sub {
+      return [ {
+         %{$r->[0]},            # Keep results information from first page only
+         count => scalar(@new), # Overwrite count value
+         results => \@new,      # Overwrite results value
+      } ];
+   };
+
+   my $last = 0;
+   $SIG{INT} = sub {
+      $last = 1;
+      return $return->();
+   };
+
    for my $page (@$r) {
       for my $this (@{$page->{results}}) {
          # Update where clause with placeholder values
          my $copy = $where;
-         while ($copy =~ s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$this->{$2}]}}) {
-            $self->log->debug("function_where: copy[$copy] field1[$1] field2[".$this->{$2}."]");
+         while ($copy =~
+            s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->_value($this, $2)]}}) {
+            #$self->log->debug("1[$1] 2[$2] value[".$self->_value($this, $2)."]");
          }
-         my $this_r = $self->search($copy) or return;
+         my $this_r = $self->search($copy, 1, 1) or return;
          if ($this_r->[0]{count} > 0) {  # Check only first page of results.
             push @new, $this;            # Keep this result if matches were found.
+         }
+         last if $last;
+      }
+      last if $last;
+   }
+
+   return $return->();
+}
+
+sub function_search {
+   my $self = shift;
+   my ($r, $search) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('function_search', $r) or return;
+   $self->brik_help_run_invalid_arg('function_search', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('function_search', $search) or return;
+
+   my @new = ();
+
+   my $return = sub {
+      return [ {
+         %{$r->[0]},            # Keep results information from first page only
+         count => scalar(@new), # Overwrite count value
+         results => \@new,      # Overwrite results value
+      } ];
+   };
+
+   my $last = 0;
+   $SIG{INT} = sub {
+      $last = 1;
+      return $return->();
+   };
+
+   for my $page (@$r) {
+      for my $this (@{$page->{results}}) {
+         # Update search clause with placeholder values
+         my $copy = $search;
+         while ($copy =~
+            s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->_value($this, $2)]}}) {
+         }
+         my $this_r = $self->search($copy, 1, 1) or return;
+         if ($this_r->[0]{count} > 0) {  # Check only first page of results.
+            push @new, @{$this_r->[0]{results}}; # Keep these results if matches were found.
+         }
+      }
+   }
+
+   return $return->();
+}
+
+#
+# Like where, but merge where results into original results.
+#
+sub function_merge {
+   my $self = shift;
+   my ($r, $argument) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('function_merge', $r) or return;
+   $self->brik_help_run_invalid_arg('function_merge', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('function_merge', $argument) or return;
+
+   my @new = ();
+
+   my $return = sub {
+      return [ {
+         %{$r->[0]},            # Keep results information from first page only
+         count => scalar(@new), # Overwrite count value
+         results => \@new,      # Overwrite results value
+      } ];
+   };
+
+   my $last = 0;
+   $SIG{INT} = sub {
+      $last = 1;
+      return $return->();
+   };
+
+   for my $page (@$r) {
+      for my $this (@{$page->{results}}) {
+         # Update where clause with placeholder values
+         my $copy = $argument;
+         while ($copy =~
+            s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->_value($this, $2)]}}) {
+            #$self->log->debug("1[$1] 2[$2] value[".$self->_value($this, $2)."]");
+         }
+         my $this_r = $self->search($copy, 1, 1) or return;
+         if ($this_r->[0]{count} > 0) {  # Check only first page of results.
+            # Merge only first result from first page.
+            my %new = ( %$this, %{$this_r->[0]{results}[0]} );
+            push @new, \%new;
+         }
+         last if $last;
+      }
+      last if $last;
+   }
+
+   return $return->();
+}
+
+sub function_whitelist {
+   my $self = shift;
+   my ($r, $lookup) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('function_whitelist', $r) or return;
+   $self->brik_help_run_invalid_arg('function_whitelist', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('function_whitelist', $lookup) or return;
+   $self->brik_help_run_file_not_found('function_whitelist', $lookup) or return;
+
+   my $fc = Metabrik::File::Csv->new_from_brik_init($self) or return;
+   my $l = $fc->read($lookup) or return;
+   my $fields = $fc->header or return;
+   my $fields_count = scalar(@$fields);
+
+   my @new = ();
+
+   my $return = sub {
+      return [ {
+         %{$r->[0]},            # Keep results information from first page only
+         count => scalar(@new), # Overwrite count value
+         results => \@new,      # Overwrite results value
+      } ];
+   };
+
+   my $last = 0;
+   $SIG{INT} = sub {
+      $last = 1;
+      return $return->();
+   };
+
+   for my $page (@$r) {
+      for my $this (@{$page->{results}}) {
+         my $skip = 0;
+         for my $field (@$fields) {
+            if (defined($self->_value($this, $field))) {
+               for my $h (@$l) {
+                  if (exists($h->{$field}) && $h->{$field} eq $self->_value($this, $field)) {
+                     $skip++;
+                     last;
+                  }
+               }
+            }
+            last if $skip == $fields_count;
+         }
+         if ($skip != $fields_count) { # No all fields have matched, we keep results.
+            push @new, $this;
+         }
+      }
+   }
+
+   return $return->();
+}
+
+sub function_dedup {
+   my $self = shift;
+   my ($r, $field) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('function_dedup', $r) or return;
+   $self->brik_help_run_invalid_arg('function_dedup', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('function_dedup', $field) or return;
+
+   my %dedup = ();
+   my @new = ();
+   for my $page (@$r) {
+      for my $this (@{$page->{results}}) {
+         my $value = $self->_value($this, $field) or next;
+         # Results are ordered in latest time first, thus we keep the freshest result.
+         if (! exists($dedup{$value})) {
+            $dedup{$value}++;
+            push @new, $this;
          }
       }
    }
@@ -225,7 +448,7 @@ sub search_pipeline {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('search_pipeline', $pipeline) or return;
 
-   my @cmd = split(/\s*\|\s*-/, $pipeline);
+   my @cmd = split(/\s*\|\s*-?/, $pipeline);
    if (@cmd == 0) {
       return $self->log->error("search_pipeline: no search command found");
    }
@@ -237,8 +460,12 @@ sub search_pipeline {
 
    # And others are the pipelined commands
    for my $this (@cmd) {
+      $this =~ s{[\s\r\n]*$}{};
       $self->log->verbose("search_pipeline: cmd[$this]");
       my @function = $this =~ m{^(\w+)\s+(.+)$};
+      if (! defined($function[0]) || ! defined($function[1])) {
+         return $self->log->error("search_pipeline: parse failed for [$this]");
+      }
       my $function = 'function_'.$function[0];
       my $argument = $function[1];
       if (! $self->can($function)) {
@@ -445,6 +672,18 @@ sub output_psv {
    return $self->output($results, $fields, $encode, '|', $cb);
 }
 
+sub output_json {
+   my $self = shift;
+   my ($results) = @_;
+
+   $self->brik_help_run_undef_arg('output_json', $results) or return;
+   $self->brik_help_run_invalid_arg('output_json', $results, 'ARRAY') or return;
+
+   my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
+
+   return $sj->encode($results);
+}
+
 1;
 
 __END__
@@ -511,7 +750,23 @@ Use search API for queries.
 
 =item B<function_where>
 
-Use the where where on results returned from the search API.
+Use the where function on results returned from the search API.
+
+=item B<function_search>
+
+Use the search function on results returned from the search API.
+
+=item B<function_dedup>
+
+Use the dedup function on results returned from the search API.
+
+=item B<function_merge>
+
+Merge results from a where-like clause into original search results returned from the search API. Warning, the where-like clause will overwrite original fields if they exists.
+
+=item B<function_whitelist>
+
+Remove results that match a list of field values taken from a CSV file.
 
 =item B<search_pipeline>
 
@@ -532,6 +787,10 @@ Dump output in CSV format.
 =item B<output_psv>
 
 Dump output in PSV format.
+
+=item B<output_json>
+
+Dump output as JSON.
 
 =back
 
