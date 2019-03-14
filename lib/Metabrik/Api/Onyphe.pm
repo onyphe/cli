@@ -1,5 +1,5 @@
 #
-# $Id: Onyphe.pm,v affceced3eec 2018/10/31 08:31:53 gomor $
+# $Id: Onyphe.pm,v 31687a060e97 2019/03/04 12:41:04 gomor $
 #
 # api::onyphe Brik
 #
@@ -11,7 +11,7 @@ use base qw(Metabrik::Client::Rest);
 
 sub brik_properties {
    return {
-      revision => '$Revision: affceced3eec $',
+      revision => '$Revision: 31687a060e97 $',
       tags => [ qw(unstable) ],
       author => 'GomoR <GomoR[at]metabrik.org>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
@@ -48,6 +48,8 @@ sub brik_properties {
         search_onionscan => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         search_sniffer => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         search_ctl => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
+        search_datashot => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
+        search_onionshot => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         user => [ qw(apikey|OPTIONAL) ],
       },
    };
@@ -106,8 +108,7 @@ sub api {
          }
       }
       else {
-         my $content = $self->get_last->content;
-         $self->log->warning("api: skipping from error [$content] code [$code]");
+         return $self->log->error("api: error code [$code] for api [$api] query [$arg]");
       }
    }
 
@@ -268,6 +269,20 @@ sub search_ctl {
    return $self->api('search_ctl', $query, $apikey, $page);
 }
 
+sub search_datashot {
+   my $self = shift;
+   my ($query, $apikey, $page) = @_;
+
+   return $self->api('search_datashot', $query, $apikey, $page);
+}
+
+sub search_onionshot {
+   my $self = shift;
+   my ($query, $apikey, $page) = @_;
+
+   return $self->api('search_onionshot', $query, $apikey, $page);
+}
+
 sub user {
    my $self = shift;
    my ($apikey) = @_;
@@ -285,7 +300,7 @@ Metabrik::Api::Onyphe - api::onyphe Brik
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2014-2018, Patrice E<lt>GomoRE<gt> Auffret
+Copyright (c) 2014-2019, Patrice E<lt>GomoRE<gt> Auffret
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

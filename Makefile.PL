@@ -13,8 +13,8 @@ WriteMakefile(
    ABSTRACT_FROM => 'lib/Metabrik/Client/Onyphe.pm',
    AUTHOR => 'ONYPHE <contact_at_onyphe.io>',
    PREREQ_PM => {
-      'Metabrik' => '1.31',
-      'Metabrik::Repository' => '1.31',
+      'Metabrik' => '1.40',
+      'Metabrik::Repository' => '1.40',
    },
    EXE_FILES => [ qw(bin/onyphe) ],
 );

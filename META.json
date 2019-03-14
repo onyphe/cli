@@ -21,8 +21,8 @@
       },
       "runtime" : {
          "requires" : {
-            "Metabrik" : "1.31",
-            "Metabrik::Repository" : "1.31",
+            "Metabrik" : "1.40",
+            "Metabrik::Repository" : "1.40",
             "perl" : "v5.6.1"
          }
       }
@@ -33,7 +33,7 @@
       },
       "Metabrik::Client::Onyphe" : {
          "file" : "lib/Metabrik/Client/Onyphe.pm",
-         "version" : "1.03"
+         "version" : "1.04"
       }
    },
    "release_status" : "stable",
@@ -42,6 +42,6 @@
          "http://opensource.org/licenses/BSD-3-Clause"
       ]
    },
-   "version" : "1.03",
+   "version" : "1.04",
    "x_serialization_backend" : "JSON::PP version 2.27400_02"
 }

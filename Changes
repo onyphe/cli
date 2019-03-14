@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.04 Thu 14 Mar 08:53:52 CET 2019
+   - new: datashot and onionshot APIs
+
 1.03 Mon  3 Dec 13:59:09 CET 2018
    - bugfix: handle function filters when subfields are used
    - new: search function

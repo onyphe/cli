@@ -7,32 +7,36 @@ Metabrik::Client::Onyphe
 
 INSTALLATION
 
-  First, install all dependencies (Ubuntu/Debian systems):
+  A/ Install all dependencies (Ubuntu/Debian/Kali systems)
 
-  $ sudo apt install -y build-essential less cpanminus libreadline-dev coreutils \
-     libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev procps aptitude
+  $ sudo apt-get install -y build-essential less cpanminus libreadline-dev \
+     coreutils libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev \
+     procps aptitude
 
-  Second, install Metabrik and its Repository:
+  B/ Install Metabrik and its Repository
 
   $ sudo cpanm -n Metabrik Metabrik::Repository
 
-  Third, install this module by typing the following:
+  C/ Install this module
 
+  $ git clone https://github.com/onyphe/client onyphe
+  $ cd onyphe
   $ perl Makefile.PL
   $ make
   $ make test
   $ sudo make install
 
-  Fourth, install api::onyphe Brik:
+  D/ Install api::onyphe Brik
 
   $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool","install","api::onyphe")'
+     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", \
+     "api::onyphe")'
 
-  Finally, set your API key in the configuration file:
+  E/ Set your API key in the configuration file
 
   $ echo '<APIKEY>' > ~/.onyphe_rc
 
-  Enjoy:
+  F/ Enjoy
 
   $ onyphe
 
@@ -95,7 +99,7 @@ EXAMPLES
 
 COPYRIGHT AND LICENSE
 
-   Copyright (c) 2018, ONYPHE
+   Copyright (c) 2018-2019, ONYPHE
 
    You may distribute this module under the terms of The BSD 3-Clause License.
    See LICENSE file in the source distribution archive.

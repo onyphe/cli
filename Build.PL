@@ -13,8 +13,8 @@ my $builder = Module::Build->new(
    dist_version_from => 'lib/Metabrik/Client/Onyphe.pm',
    requires => {
       'perl' => '5.6.1',
-      'Metabrik' => '1.31',
-      'Metabrik::Repository' => '1.31',
+      'Metabrik' => '1.40',
+      'Metabrik::Repository' => '1.40',
    },
    configure_requires => {
       'Module::Build' => 0,

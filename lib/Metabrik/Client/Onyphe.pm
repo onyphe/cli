@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.03';
+our $VERSION = '1.04';
 
 use base qw(Metabrik);
 
@@ -800,7 +800,7 @@ L<Metabrik>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018, ONYPHE
+Copyright (c) 2018-2019, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.
