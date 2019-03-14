@@ -95,7 +95,7 @@ EXAMPLES
   # !!! WARNING: may consume up to 11,000 credits.
   $ onyphe -autoscroll 1 -fields ip,port,protocol,datamd5 \
        -search 'category:datascan protocol:modbus -dayago:1 \
-     | -where category:datascan protocol:http ip:$ip' \
+     | -where category:datascan protocol:http ip:$ip'
 
 COPYRIGHT AND LICENSE
 
