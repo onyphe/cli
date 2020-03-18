@@ -15,7 +15,7 @@ my %lopts = (
    output => 'psv',
    page => '1',
    autoscroll => '0',
-   apiurl => 'https://www.onyphe.io/api',
+   apiurl => 'https://www.onyphe.io/api/v2',
 );
 
 # Option parsing
