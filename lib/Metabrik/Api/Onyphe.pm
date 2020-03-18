@@ -242,6 +242,13 @@ sub onionshot {
    return $self->api('simple/onionshot', $ip, $apikey, $page);
 }
 
+sub datashot {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+
+   return $self->api('simple/datashot', $ip, $apikey, $page);
+}
+
 sub datamd5 {
    my $self = shift;
    my ($sum, $apikey, $page) = @_;
