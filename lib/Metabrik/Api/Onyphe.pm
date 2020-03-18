@@ -21,7 +21,7 @@ sub brik_properties {
          wait => [ qw(seconds) ],
       },
       attributes_default => {
-         apiurl => 'https://www.onyphe.io/api',
+         apiurl => 'https://www.onyphe.io/api/v2',
          wait => 3,
       },
       commands => {
@@ -31,14 +31,21 @@ sub brik_properties {
         pastries => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         inetnum => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         threatlist => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
+        topsite => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         synscan => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
+        vulnscan => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         datascan => [ qw(ip|string apikey|OPTIONAL page|OPTIONAL) ],
         onionscan => [ qw(ip|string apikey|OPTIONAL page|OPTIONAL) ],
         sniffer => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         ctl => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         reverse => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         forward => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
-        md5 => [ qw(sum apikey|OPTIONAL) ],
+        onionshot => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
+        datashot => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
+        datamd5 => [ qw(sum apikey|OPTIONAL) ],
+        domain => [ qw(string apikey|OPTIONAL page|OPTIONAL) ],
+        hostname => [ qw(string apikey|OPTIONAL page|OPTIONAL) ],
+        list => [ qw(apikey|OPTIONAL page|OPTIONAL) ],
         search_datascan => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         search_inetnum => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         search_pastries => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
@@ -83,11 +90,12 @@ sub api {
    }
    else {
    RETRY:
-      my $url = $apiurl.'/'.$api.'/'.$arg.'?k='.$apikey;
+      my $url = $apiurl.'/'.$api.'/'.$arg;
       if (defined($page)) {
-         $url .= '&page='.$page;
+         $url .= '?page='.$page;
       }
 
+      $self->add_headers({"Authorization" => "apikey $apikey"});
       my $res = $self->get($url);
       my $code = $self->code;
       if ($code == 429) {
@@ -117,93 +125,128 @@ sub api {
 
 sub geoloc {
    my $self = shift;
-   my ($ip) = @_;
+   my ($ip, $apikey, $page) = @_;
 
-   return $self->api('geoloc', $ip);
+   return $self->api('simple/geoloc', $ip, $apikey, $page);
 }
 
 sub ip {
    my $self = shift;
-   my ($ip, $apikey) = @_;
+   my ($ip, $apikey, $page) = @_;
 
-   return $self->api('ip', $ip, $apikey);
+   return $self->api('summary/ip', $ip, $apikey, $page);
+}
+
+sub domain {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+
+   return $self->api('summary/domain', $ip, $apikey, $page);
+}
+
+sub hostname {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+ 
+   return $self->api('summary/hostname', $ip, $apikey, $page);
 }
 
 sub pastries {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('pastries', $ip, $apikey, $page);
+   return $self->api('simple/pastries', $ip, $apikey, $page);
 }
 
 sub inetnum {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('inetnum', $ip, $apikey, $page);
+   return $self->api('simple/inetnum', $ip, $apikey, $page);
 }
 
 sub threatlist {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('threatlist', $ip, $apikey, $page);
+   return $self->api('simple/threatlist', $ip, $apikey, $page);
+}
+
+sub topsite {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+
+   return $self->api('simple/topsite', $ip, $apikey, $page);
 }
 
 sub synscan {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('synscan', $ip, $apikey, $page);
+   return $self->api('simple/synscan', $ip, $apikey, $page);
+}
+
+sub vulnscan {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+
+   return $self->api('simple/vulnscan', $ip, $apikey, $page);
 }
 
 sub datascan {
    my $self = shift;
    my ($ip_or_string, $apikey, $page) = @_;
 
-   return $self->api('datascan', $ip_or_string, $apikey, $page);
+   return $self->api('simple/datascan', $ip_or_string, $apikey, $page);
 }
 
 sub onionscan {
    my $self = shift;
    my ($onion, $apikey, $page) = @_;
 
-   return $self->api('onionscan', $onion, $apikey, $page);
+   return $self->api('simple/onionscan', $onion, $apikey, $page);
 }
 
 sub sniffer {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('sniffer', $ip, $apikey, $page);
+   return $self->api('simple/sniffer', $ip, $apikey, $page);
 }
 
 sub ctl {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('ctl', $ip, $apikey, $page);
+   return $self->api('simple/ctl', $ip, $apikey, $page);
 }
 
 sub reverse {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('reverse', $ip, $apikey, $page);
+   return $self->api('simple/resolver/reverse', $ip, $apikey, $page);
 }
 
 sub forward {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('forward', $ip, $apikey, $page);
+   return $self->api('simple/resolver/forward', $ip, $apikey, $page);
 }
 
-sub md5 {
+sub onionshot {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+
+   return $self->api('simple/onionshot', $ip, $apikey, $page);
+}
+
+sub datamd5 {
    my $self = shift;
    my ($sum, $apikey, $page) = @_;
 
-   return $self->api('md5', $sum, $apikey, $page);
+   return $self->api('simple/datascan/datamd5', $sum, $apikey, $page);
 }
 
 sub search_datascan {
