@@ -23,7 +23,7 @@ sub brik_properties {
          _sb => [ qw(INTERNAL) ],
       },
       attributes_default => {
-         apiurl => 'https://www.onyphe.io/api',
+         apiurl => 'https://www.onyphe.io/api/v2',
          autoscroll => 0,
       },
       commands => {
