@@ -29,8 +29,7 @@ INSTALLATION
   D/ Install api::onyphe Brik
 
   $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", \
-     "api::onyphe")'
+     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", "api::onyphe")'
 
   E/ Set your API key in the configuration file
 
