@@ -1,7 +1,7 @@
 Metabrik::Client::Onyphe
 ========================
 
-   Official client to access the ONYPHE API.
+   Official client to access the ONYPHE API v2.
 
    To know more: https://www.onyphe.io/
 
@@ -48,7 +48,7 @@ EXAMPLES
   $ onyphe -simple user
 
   #
-  # Query the simple API
+  # Query the simple API v2
   # See https://www.onyphe.io/documentation/api for more APIs
   #
 
@@ -62,7 +62,7 @@ EXAMPLES
   $ onyphe -simple ip -value 8.8.8.8 -fields -data
 
   #
-  # Query the search API (need subscription, see https://www.onyphe.io/pricing)
+  # Query the search API v2 (need subscription, see https://www.onyphe.io/pricing)
   # See https://www.onyphe.io/documentation/api for more APIs
   #
 
