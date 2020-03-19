@@ -334,6 +334,65 @@ sub function_merge {
    return $return->();
 }
 
+sub function_blacklist {
+   my $self = shift;
+   my ($r, $lookup) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('function_blacklist', $r) or return;
+   $self->brik_help_run_invalid_arg('function_blacklist', $r, 'ARRAY')
+      or return;
+   $self->brik_help_run_undef_arg('function_blacklist', $lookup) or return;
+   $self->brik_help_run_file_not_found('function_blacklist', $lookup)
+      or return;
+
+   my $fc = Metabrik::File::Csv->new_from_brik_init($self) or return;
+   my $l = $fc->read($lookup) or return;
+   my $fields = $fc->header or return;
+   my $fields_count = scalar(@$fields);
+
+   my @new = ();
+
+   my $return = sub {
+      return [ {
+         %{$r->[0]},            # Keep results information from first page only
+         count => scalar(@new), # Overwrite count value
+         results => \@new,      # Overwrite results value
+      } ];
+   };
+
+   my $last = 0;
+   $SIG{INT} = sub {
+      $last = 1;
+      return $return->();
+   };
+
+   for my $page (@$r) {
+      for my $this (@{$page->{results}}) {
+         my $skip = 0;
+         for my $field (@$fields) {
+            if (defined($self->_value($this, $field))) {
+               for my $h (@$l) {
+                  if (exists($h->{$field})
+                  &&  $h->{$field} ne $self->_value($this, $field)) {
+                     $skip++;
+                     last;
+                  }
+               }
+            }
+            last if $skip == $fields_count;
+         }
+         if ($skip != $fields_count) { # Not all fields have matched,
+                                       # we keep results.
+            push @new, $this;
+         }
+      }
+   }
+
+   return $return->();
+}
+
 sub function_whitelist {
    my $self = shift;
    my ($r, $lookup) = @_;
@@ -341,9 +400,11 @@ sub function_whitelist {
    my $apikey = $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('function_whitelist', $r) or return;
-   $self->brik_help_run_invalid_arg('function_whitelist', $r, 'ARRAY') or return;
+   $self->brik_help_run_invalid_arg('function_whitelist', $r, 'ARRAY')
+      or return;
    $self->brik_help_run_undef_arg('function_whitelist', $lookup) or return;
-   $self->brik_help_run_file_not_found('function_whitelist', $lookup) or return;
+   $self->brik_help_run_file_not_found('function_whitelist', $lookup)
+      or return;
 
    my $fc = Metabrik::File::Csv->new_from_brik_init($self) or return;
    my $l = $fc->read($lookup) or return;
@@ -767,6 +828,10 @@ Merge results from a where-like clause into original search results returned fro
 =item B<function_whitelist>
 
 Remove results that match a list of field values taken from a CSV file.
+
+=item B<function_blacklist>
+
+Keep results that match a list of field values taken from a CSV file.
 
 =item B<search_pipeline>
 
