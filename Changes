@@ -1,5 +1,9 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.05 Wed 18 Mar 08:53:52 CET 2020
+   - update: API v2
+   - new: topsite, vulnscan, datamd5, domain and hostname API v2
+
 1.04 Thu 14 Mar 08:53:52 CET 2019
    - new: datashot and onionshot APIs
 
