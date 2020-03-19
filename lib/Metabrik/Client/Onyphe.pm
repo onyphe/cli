@@ -27,6 +27,7 @@ sub brik_properties {
          autoscroll => 0,
       },
       commands => {
+         user => [ ],
          simple => [ qw(api value page|OPTIONAL maxpage|OPTIONAL) ],
          search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
          search_where => [ qw(query where page|OPTIONAL maxpage|OPTIONAL) ],
@@ -61,6 +62,18 @@ sub brik_init {
    return $self->SUPER::brik_init;
 }
 
+sub user {
+   my $self = shift;
+
+   my $apikey = $self->apikey;
+   my $apiurl = $self->apiurl;
+
+   my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
+
+   return $ao->user($apikey);
+}
+
 sub simple {
    my $self = shift;
    my ($api, $value, $page, $maxpage) = @_;
@@ -69,22 +82,17 @@ sub simple {
    my $apikey = $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('simple', $api) or return;
+   $self->brik_help_run_undef_arg('simple', $value) or return;
 
    my $apiurl = $self->apiurl;
 
    my $ao = $self->_ao;
    $ao->apiurl($apiurl);
 
+   $api = "simple_$api";
    if (! $ao->can($api)) {
       return $self->log->error("simple: api [$api] unknown");
    }
-
-   # Special case for user API
-   if ($api eq 'user') {
-      return $ao->user($apikey);
-   }
-
-   $self->brik_help_run_undef_arg('simple', $value) or return;
 
    $self->log->verbose("simple: requesting page [$page]");
 
@@ -116,6 +124,28 @@ sub simple {
    return \@r;
 }
 
+sub summary {
+   my $self = shift;
+   my ($api, $value) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('summary', $api) or return;
+   $self->brik_help_run_undef_arg('summary', $value) or return;
+
+   my $apiurl = $self->apiurl;
+
+   my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
+
+   $api = "summary_$api";
+   if (! $ao->can($api)) {
+      return $self->log->error("summary: api [$api] unknown");
+   }
+
+   return $ao->$api($value, $apikey);
+}
+
 sub search {
    my $self = shift;
    my ($query, $page, $maxpage) = @_;
@@ -135,18 +165,10 @@ sub search {
          "'category:CATEGORY'");
    }
 
-   my $category = lc($1);
-   my $search = $2;
-
-   my $api = 'search_'.$category;
-   if (! $ao->can($api)) {
-      return $self->log->error("search: category [$category] unknown");
-   }
-
    $self->log->verbose("search: requesting page [$page]");
 
    my @r = ();
-   my $results = $ao->$api($search, $apikey, $page) or return;
+   my $results = $ao->search($query, $apikey, $page) or return;
    if (ref($results) ne 'ARRAY') {
       return $self->log->error("search: not an ARRAY [".Data::Dumper::Dumper($results).
          "]");
@@ -166,7 +188,7 @@ sub search {
       };
       for ($page..$maxpage) {
          $self->log->verbose("search: scrolling page [$_]");
-         my $results = $ao->$api($search, $apikey, $_) or return;
+         my $results = $ao->search($query, $apikey, $_) or return;
          push @r, @$results;
          my $perc = sprintf("%.02f%%", $_ / $maxpage * 100);
          $self->log->info("search: page [$_/$maxpage] fetched ($perc)...");
@@ -801,13 +823,21 @@ Official client for ONYPHE API access.
 
 =item B<brik_init>
 
-=item B<simple>
+=item B<user>
 
-Use simple API for queries.
+Query user license information (enpoints and categories allowed along with remaining credits).
 
-=item B<search>
+=item B<simple> (value)
 
-Use search API for queries.
+Use Simple API for queries (geoloc, inetnum, pastries, datascan, ...).
+
+=item B<summary> (value)
+
+Use Summary API for queries (ip, domain, hostname).
+
+=item B<search> (query)
+
+Use Search API for queries.
 
 =item B<function_where>
 

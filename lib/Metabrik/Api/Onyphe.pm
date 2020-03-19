@@ -22,11 +22,13 @@ sub brik_properties {
       },
       attributes_default => {
          apiurl => 'https://www.onyphe.io/api/v2',
-         wait => 3,
+         wait => 2,
       },
       commands => {
         api => [ qw(api ip apikey|OPTIONAL page|OPTIONAL) ],
-        ip => [ qw(ip apikey|OPTIONAL) ],
+        summary_ip => [ qw(ip apikey|OPTIONAL) ],
+        summary_domain => [ qw(ip apikey|OPTIONAL) ],
+        summary_hostname => [ qw(ip apikey|OPTIONAL) ],
         geoloc => [ qw(ip) ],
         pastries => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
         inetnum => [ qw(ip apikey|OPTIONAL page|OPTIONAL) ],
@@ -46,17 +48,7 @@ sub brik_properties {
         domain => [ qw(string apikey|OPTIONAL page|OPTIONAL) ],
         hostname => [ qw(string apikey|OPTIONAL page|OPTIONAL) ],
         list => [ qw(apikey|OPTIONAL page|OPTIONAL) ],
-        search_datascan => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_inetnum => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_pastries => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_resolver => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_synscan => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_threatlist => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_onionscan => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_sniffer => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_ctl => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_datashot => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
-        search_onionshot => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
+        search => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         user => [ qw(apikey|OPTIONAL) ],
       },
    };
@@ -106,8 +98,8 @@ sub api {
       elsif ($code == 200) {
          my $content = $self->content;
          if ($content->{status} eq 'nok') {
-            my $message = $content->{message};
-            return $self->log->error("api: got error with message [$message]");
+            my $text = $content->{text};
+            return $self->log->error("api: got error with text [$text]");
          }
          else {
             $content->{arg} = $arg;  # Add the IP or other info,
@@ -130,25 +122,25 @@ sub geoloc {
    return $self->api('simple/geoloc', $ip, $apikey, $page);
 }
 
-sub ip {
+sub summary_ip {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('summary/ip', $ip, $apikey, $page);
+   return $self->api('summary/ip', $ip, $apikey);
 }
 
-sub domain {
+sub summary_domain {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
-   return $self->api('summary/domain', $ip, $apikey, $page);
+   return $self->api('summary/domain', $ip, $apikey);
 }
 
-sub hostname {
+sub summary_hostname {
    my $self = shift;
-   my ($ip, $apikey, $page) = @_;
+   my ($ip, $apikey) = @_;
  
-   return $self->api('summary/hostname', $ip, $apikey, $page);
+   return $self->api('summary/hostname', $ip, $apikey);
 }
 
 sub pastries {
@@ -256,81 +248,11 @@ sub datamd5 {
    return $self->api('simple/datascan/datamd5', $sum, $apikey, $page);
 }
 
-sub search_datascan {
+sub search {
    my $self = shift;
    my ($query, $apikey, $page) = @_;
 
-   return $self->api('search_datascan', $query, $apikey, $page);
-}
-
-sub search_inetnum {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_inetnum', $query, $apikey, $page);
-}
-
-sub search_pastries {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_pastries', $query, $apikey, $page);
-}
-
-sub search_resolver {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_resolver', $query, $apikey, $page);
-}
-
-sub search_synscan {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_synscan', $query, $apikey, $page);
-}
-
-sub search_threatlist {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_threatlist', $query, $apikey, $page);
-}
-
-sub search_onionscan {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_onionscan', $query, $apikey, $page);
-}
-
-sub search_sniffer {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_sniffer', $query, $apikey, $page);
-}
-
-sub search_ctl {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_ctl', $query, $apikey, $page);
-}
-
-sub search_datashot {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_datashot', $query, $apikey, $page);
-}
-
-sub search_onionshot {
-   my $self = shift;
-   my ($query, $apikey, $page) = @_;
-
-   return $self->api('search_onionshot', $query, $apikey, $page);
+   return $self->api('search', $query, $apikey, $page);
 }
 
 sub user {

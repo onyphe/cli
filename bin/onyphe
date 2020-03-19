@@ -10,9 +10,9 @@ use Metabrik::Client::Onyphe;
 
 # Default values
 my %lopts = (
-   verbose => 1,
+   verbose => 0,
    onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
-   output => 'psv',
+   output => 'json',
    page => '1',
    autoscroll => '0',
    apiurl => 'https://www.onyphe.io/api/v2',
@@ -20,7 +20,9 @@ my %lopts = (
 
 # Option parsing
 GetOptions(
+   "user" => \$lopts{user},
    "simple=s" => \$lopts{simple},
+   "summary=s" => \$lopts{summary},
    "value=s" => \$lopts{value},
    "search=s" => \$lopts{search},
    "verbose=i" => \$lopts{verbose},
@@ -53,6 +55,15 @@ if ($lopts{search}) {   # Search API query mode with pipeline support
    $r = $cli->search_pipeline($lopts{search}, $lopts{page}, $lopts{maxpage})
       or $cli->log->fatal("search_pipeline: aborted");
 }
+elsif ($lopts{summary}) {
+   my $summary = $lopts{summary};
+   my $value = $lopts{value};
+   $r = $cli->summary($summary, $value)
+      or $cli->log->fatal("summary: aborted");
+}
+elsif ($lopts{user}) {
+   $r = $cli->user() or $cli->log->fatal("user: aborted");
+}
 else {  # Simple API query mode
    my $simple = $lopts{simple};
    my $value = $lopts{value};
@@ -78,13 +89,17 @@ sub usage {
    print<<EOF
 
 Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
+       onyphe [options] -user
        onyphe [options] -simple API -value VALUE
+       onyphe [options] -summary API -value VALUE
 
+   -user                                   get information on your license
    -apikey <APIKEY>                        your personal ONYPHE API key
-   -search <SEARCH>                        use search API for query
-   -simple <API>                           use simple API for query (need -value)
-   -value <VALUE>                          value to use when using simple API
-   -output <MODE>                          output mode (default: psv)
+   -search <SEARCH>                        use Search API for query
+   -summary <API>                          use Summary API for query (need -value)
+   -simple <API>                           use Simple API for query (need -value)
+   -value <VALUE>                          value to use when using Simple or Summary API
+   -output <MODE>                          output mode (default: json)
                                            Modes: dump, csv, psv, json
    -page <PAGE>                            fetch results for page (default: 1)
    -autoscroll <0|1>                       use autoscroll feature (default: 0)
@@ -93,7 +108,7 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
    -fields <-|+><FIELD1,FIELD2,...FIELDn>  comma separated list of fields to display (+)
                                            or remove (-) from output
    -encode <FIELD1,FIELD2,...FIELDn>       comma separated list of fields to Base64 encode
-   -verbose <0|1|2|3>                      verbosity level (default: 1)
+   -verbose <0|1|2|3>                      verbosity level (default: 0)
 
 EOF
 ;
@@ -129,8 +144,9 @@ sub load_onyphe_rc {
 sub sanity_checks {
    my ($lopts) = @_;
 
-   if (! defined($lopts{search}) && ! defined($lopts{simple})) {
-      print "ERROR: -search or -simple argument missing\n";
+   if (! defined($lopts{search}) && ! defined($lopts{simple})
+   &&  ! defined($lopts{summary}) && ! defined($lopts{user})) {
+      print "ERROR: need -search, -simple, -summary or -user argument\n";
       usage();
    }
 
@@ -139,12 +155,12 @@ sub sanity_checks {
       usage();
    }
 
-   if ($lopts{simple} && $lopts{simple} ne 'user' && ! defined($lopts{value})) {
-      print "ERROR: -simple argument used but -value argument missing\n";
+   if (($lopts{simple} || $lopts{summary}) && ! defined($lopts{value})) {
+      print "ERROR: -simple or -summary argument used but -value argument missing\n";
       usage();
    }
 
-   if (! $lopts{simple} && defined($lopts{value})) {
+   if (! ($lopts{simple} || $lopts{summary}) && defined($lopts{value})) {
       print "ERROR: -simple argument missing but -value argument used\n";
       usage();
    }
