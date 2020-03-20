@@ -31,8 +31,9 @@ sub brik_properties {
       commands => {
          user => [ ],
          simple => [ qw(api value page|OPTIONAL maxpage|OPTIONAL) ],
+         summary => [ qw(api value) ],
          search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
-         search_where => [ qw(query where page|OPTIONAL maxpage|OPTIONAL) ],
+         export => [ qw(query) ],
          output_dump => [ qw(results) ],
          output => [ qw(
             results fields|OPTIONAL encode|OPTIONAL separator|OPTIONAL cb|OPTIONAL
@@ -199,6 +200,112 @@ sub search {
    }
 
    return \@r;
+}
+
+sub export {
+   my $self = shift;
+   my ($query, $callback) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('export', $query) or return;
+
+   my $apiurl = $self->apiurl;
+
+   my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
+
+   if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
+      return $self->log->error("export: please start your search with ".
+         "'category:CATEGORY'");
+   }
+
+   # Default callback
+   $callback ||= sub {
+      my ($lines) = @_;
+
+      for (@$lines) {
+         print "$_\n";
+      }
+
+      return 1;
+   };
+
+   $ao->export($query, $callback, $apikey);
+
+   return 1;
+}
+
+sub export_pipeline {
+   my $self = shift;
+   my ($pipeline) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('export_pipeline', $pipeline) or return;
+
+   my @cmd = split(/\s*\|\s*-?/, $pipeline);
+   if (@cmd == 0) {
+      return $self->log->error("export_pipeline: no search command found");
+   }
+
+   # First one is hopefully a search query
+   my $query = shift @cmd;
+   if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
+      return $self->log->error("export_pipeline: please start your search ".
+         "with 'category:CATEGORY'");
+   }
+
+   my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
+
+   $self->log->verbose("export_pipeline: query[$query]");
+
+   my $callback = sub {
+      my ($lines) = @_;
+
+      # Convert to result format to process with functions:
+      my @results = ();
+      for (@$lines) {
+         push @results, $sj->decode($_);
+      }
+      my $r = [{ results => \@results }];
+
+      for my $this (@cmd) {
+         $this =~ s{[\s\r\n]*$}{};
+         $self->log->verbose("export_pipeline: cmd[$this]");
+         my @function = $this =~ m{^(\w+)\s+(.+)$};
+         if (! defined($function[0]) || ! defined($function[1])) {
+            return $self->log->error("export_pipeline: parse failed ".
+               "for [$this]");
+         }
+         my $function = 'function_'.$function[0];
+         my $argument = $function[1];
+         if (! $self->can($function)) {
+            return $self->log->error("export_pipeline: unknown function ".
+               "[$function[0]]");
+         }
+         if (! defined($argument) || ! length($argument)) {
+            return $self->log->error("export_pipeline: unknown argument ".
+               "[$argument]");
+         }
+         $self->log->verbose("export_pipeline: function[$function] ".
+            "argument[$argument]");
+         $r = $self->$function($r, $argument) or return;
+      }
+
+      # Put back in line format
+      $lines = $r->[0]{results};
+
+      for (@$lines) {
+         print $sj->encode($_)."\n";
+      }
+
+      return 1;
+   };
+
+   $self->export($query, $callback);
+
+   return 1;
 }
 
 sub _value {
@@ -403,13 +510,19 @@ sub function_blacklist {
             # Fetch the value from current result $this:
             my $value = $self->_value($this, $field);
             if (defined($value)) {
+               $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
                # Compare against all fields given in the CSV:
-               for my $h (@$l) {
-                  if (exists($h->{$field}) && $h->{$field} eq $value) {
-                     #print "[DEBUG] skip field [$field] value [$value]\n";
-                     $skip++;
-                     last;
+               for my $a (@$value) {
+                  my $match = 0;
+                  for my $h (@$l) {
+                     if (exists($h->{$field}) && $h->{$field} eq $a) {
+                        #print "[DEBUG] skip field [$field] value [$a]\n";
+                        $skip++;
+                        $match++;
+                        last;
+                     }
                   }
+                  last if $match;
                }
             }
             # When all fields have matched, no need to compare with remaining
@@ -473,13 +586,19 @@ sub function_whitelist {
             # Fetch the value from current result $this:
             my $value = $self->_value($this, $field);
             if (defined($value)) {
+               $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
                # Compare against all fields given in the CSV:
-               for my $h (@$l) {
-                  if (exists($h->{$field}) && $h->{$field} eq $value) {
-                     #print "[DEBUG] skip field [$field] value [$value]\n";
-                     $skip++;
-                     last;
+               for my $a (@$value) {
+                  my $match = 0;
+                  for my $h (@$l) {
+                     if (exists($h->{$field}) && $h->{$field} eq $a) {
+                        #print "[DEBUG] skip field [$field] value [$a]\n";
+                        $skip++;
+                        $match++;
+                        last;
+                     }
                   }
+                  last if $match;
                }
             }
             # When all fields have matched, no need to compare with remaining
@@ -869,6 +988,10 @@ Use Summary API for queries (ip, domain, hostname).
 =item B<search> (query)
 
 Use Search API for queries.
+
+=item B<export> (query)
+
+Use Export API for queries.
 
 =item B<function_where>
 

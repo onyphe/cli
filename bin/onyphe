@@ -26,6 +26,7 @@ GetOptions(
    "summary=s" => \$lopts{summary},
    "value=s" => \$lopts{value},
    "search=s" => \$lopts{search},
+   "export=s" => \$lopts{export},
    "verbose=i" => \$lopts{verbose},
    "apikey=s" => \$lopts{apikey},
    "output=s" => \$lopts{output},
@@ -58,6 +59,12 @@ if ($lopts{search}) {   # Search API query mode with pipeline support
    $r = $cli->search_pipeline($lopts{search}, $lopts{page}, $lopts{maxpage})
       or $cli->log->fatal("search_pipeline: aborted");
 }
+elsif ($lopts{export}) {   # Export API query mode
+   # Export does not return results as it streams them, so there is no
+   # output mode to use at the end.
+   $cli->export_pipeline($lopts{export})
+      or $cli->log->fatal("export_pipeline: aborted");
+}
 elsif ($lopts{summary}) {
    my $summary = $lopts{summary};
    my $value = $lopts{value};
@@ -75,12 +82,14 @@ else {  # Simple API query mode
 }
 
 # Output results
-my $output_mode = 'output_'.$lopts{output};
-my $output = $cli->$output_mode($r, $lopts{fields}, $lopts{encode});
-if (! defined($output)) {
-   $cli->log->fatal("$output_mode: aborted");
+if (defined($r)) {
+   my $output_mode = 'output_'.$lopts{output};
+   my $output = $cli->$output_mode($r, $lopts{fields}, $lopts{encode});
+   if (! defined($output)) {
+      $cli->log->fatal("$output_mode: aborted");
+   }
+   print $output;
 }
-print $output;
 
 exit(0);
 
@@ -149,8 +158,9 @@ sub sanity_checks {
    my ($lopts) = @_;
 
    if (! defined($lopts{search}) && ! defined($lopts{simple})
-   &&  ! defined($lopts{summary}) && ! defined($lopts{user})) {
-      print "ERROR: need -search, -simple, -summary or -user argument\n";
+   &&  ! defined($lopts{summary}) && ! defined($lopts{user})
+   &&  ! defined($lopts{export})) {
+      print "ERROR: need -search, -simple, -summary, -export or -user argument\n";
       usage();
    }
 

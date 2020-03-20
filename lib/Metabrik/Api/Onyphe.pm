@@ -50,6 +50,11 @@ sub brik_properties {
         list => [ qw(apikey|OPTIONAL page|OPTIONAL) ],
         search => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         user => [ qw(apikey|OPTIONAL) ],
+        export => [ qw(query callback apikey|OPTIONAL) ],
+      },
+      require_modules => {
+         'AnyEvent' => [ ],
+         'AnyEvent::HTTP' => [ ],
       },
    };
 }
@@ -61,7 +66,8 @@ sub api {
    $apikey ||= $self->apikey;
    $self->brik_help_run_undef_arg('api', $api) or return;
    $self->brik_help_run_undef_arg('api', $arg) or return;
-   my $ref = $self->brik_help_run_invalid_arg('api', $arg, 'SCALAR', 'ARRAY') or return;
+   my $ref = $self->brik_help_run_invalid_arg('api', $arg, 'SCALAR', 'ARRAY')
+      or return;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
 
    my $wait = $self->wait;
@@ -69,7 +75,10 @@ sub api {
    $api =~ s{_}{/}g;
 
    my $apiurl = $self->apiurl;
-   $apiurl =~ s{/*$}{};
+   $self->add_headers({
+      'Authorization' => "apikey $apikey",
+      'Content-Type' => 'application/json',
+   });
 
    $self->log->verbose("api: using url[$apiurl]");
 
@@ -87,7 +96,6 @@ sub api {
          $url .= '?page='.$page;
       }
 
-      $self->add_headers({"Authorization" => "apikey $apikey"});
       my $res = $self->get($url);
       my $code = $self->code;
       if ($code == 429) {
@@ -262,6 +270,73 @@ sub user {
    my ($apikey) = @_;
 
    return $self->api('user', '', $apikey);
+}
+
+sub export {
+   my $self = shift;
+   my ($query, $callback, $apikey) = @_;
+
+   $apikey ||= $self->apikey;
+   $self->brik_help_run_undef_arg('export', $query) or return;
+   $self->brik_help_run_undef_arg('export', $callback) or return;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+
+   my $apiurl = $self->apiurl;
+
+   $self->log->verbose("export: using url[$apiurl]");
+
+   my $url = $apiurl.'/master/export/'.$query;
+
+   $self->add_headers({"Authorization" => "apikey $apikey"});
+
+   # Will store incomplete line for later processing
+   my $buf = '';
+
+   my $cv = AnyEvent->condvar;
+
+   AnyEvent::HTTP::http_get($url,
+      headers => {
+         'Authorization' => "apikey $apikey",
+         'Content-Type' => "application/json",
+      },
+      on_body => sub {
+         my ($data, $hdr) = @_;
+
+         $data = $buf.$data;  # Complete from previous remaining buf
+
+         my $status = $hdr->{Status};
+         my $encoding = $hdr->{'transfer-encoding'};
+         if ($status == 200 && $encoding eq 'chunked') {
+            # $this will contain all lines until the last one
+            # with \n ending chars. This last one will be put back
+            # into $buf for next processing.
+            # Thus, we only handle input stream on a line-by-line basis.
+            my ($this, $tail) = $data =~ m{^(.*\n)(.*)$}s;
+            my @lines = split(/\n/, $this);
+            $buf = $tail || '';
+
+            $callback->(\@lines);
+         }
+         else {
+            print STDERR "ERROR: status [$status]\n";
+            return $cv->send;
+         }
+ 
+         return 1;
+      },
+      # Completion callback
+      sub {
+         my (undef, $hdr) = @_;
+ 
+         my $status = $hdr->{Status};
+         #print STDERR "status [$status]\n";
+
+         return $cv->send;
+      },
+   );
+
+   # Wait for termination
+   return $cv->recv;
 }
 
 1;
