@@ -37,6 +37,7 @@ GetOptions(
    "autoscroll=i" => \$lopts{autoscroll},
    "apiurl=s" => \$lopts{apiurl},
    "wait=i" => \$lopts{wait},
+   "master" => \$lopts{master},
 ) or usage();
 
 # Load API key from onyphe rc file
@@ -52,6 +53,7 @@ $cli->apikey($lopts{apikey});
 $cli->apiurl($lopts{apiurl});
 $cli->autoscroll($lopts{autoscroll} ? 1 : 0);
 $cli->wait($lopts{wait});
+$cli->master($lopts{master} ? 1 : 0);
 
 # Launch query
 my $r;

@@ -19,10 +19,12 @@ sub brik_properties {
          apikey => [ qw(key) ],
          apiurl => [ qw(url) ],
          wait => [ qw(seconds) ],
+         master => [ qw(0|1) ],
       },
       attributes_default => {
          apiurl => 'https://www.onyphe.io/api/v2',
          wait => 2,
+         master => 0,
       },
       commands => {
         api => [ qw(api ip apikey|OPTIONAL page|OPTIONAL) ],
@@ -285,9 +287,16 @@ sub export {
 
    $self->log->verbose("export: using url[$apiurl]");
 
-   my $url = $apiurl.'/master/export/'.$query;
+   my $api = '/export/';
+   if ($self->master) {
+      $api = '/master/export/';
+   }
+   my $url = $apiurl.$api.$query;
 
-   $self->add_headers({"Authorization" => "apikey $apikey"});
+   $self->add_headers({
+      'Authorization' => "apikey $apikey",
+      'Content-Type' => 'application/json',
+   });
 
    # Will store incomplete line for later processing
    my $buf = '';
@@ -311,7 +320,13 @@ sub export {
             # with \n ending chars. This last one will be put back
             # into $buf for next processing.
             # Thus, we only handle input stream on a line-by-line basis.
-            my ($this, $tail) = $data =~ m{^(.*\n)(.*)$}s;
+            my ($this, $tail) = $data =~ m{^(.*?\n)([^\n]*)$}s;
+            # One line is not complete, add to buf and go to next:
+            if (!defined($this)) {
+               $buf = $data;
+               return 1;
+            }
+
             my @lines = split(/\n/, $this);
             $buf = $tail || '';
 

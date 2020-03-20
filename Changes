@@ -1,5 +1,9 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.08 Fri 20 Mar 15:38:02 CET 2020
+   - bugfix: on parsing streamed data from Export API, was missing data
+   - bugfix: Export API path
+
 1.07 Fri 20 Mar 14:16:29 CET 2020
    - UPDATE: JSON output is now line-based. One result is one JSON line.
    - new: Export API with pipeline support

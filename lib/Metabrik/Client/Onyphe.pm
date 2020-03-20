@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.07';
+our $VERSION = '1.08';
 
 use base qw(Metabrik);
 
@@ -20,6 +20,7 @@ sub brik_properties {
          apiurl => [ qw(apiurl) ],
          autoscroll => [ qw(0|1) ],
          wait => [ qw(seconds) ],
+         master => [ qw(0|1) ],
          _ao => [ qw(INTERNAL) ],
          _sb => [ qw(INTERNAL) ],
       },
@@ -211,9 +212,11 @@ sub export {
    $self->brik_help_run_undef_arg('export', $query) or return;
 
    my $apiurl = $self->apiurl;
+   my $master = $self->master;
 
    my $ao = $self->_ao;
    $ao->apiurl($apiurl);
+   $ao->master($master);
 
    if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
       return $self->log->error("export: please start your search with ".
@@ -1020,6 +1023,10 @@ Keep results that match a list of field values taken from a CSV file.
 =item B<search_pipeline>
 
 Perform a search query by using | separated list of functions.
+
+=item B<export_pipeline>
+
+Perform an export query by using | separated list of functions.
 
 =item B<output_dump>
 
