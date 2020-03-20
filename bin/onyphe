@@ -16,6 +16,7 @@ my %lopts = (
    page => '1',
    autoscroll => '0',
    apiurl => 'https://www.onyphe.io/api/v2',
+   wait => 2,
 );
 
 # Option parsing
@@ -34,6 +35,7 @@ GetOptions(
    "maxpage=i" => \$lopts{maxpage},
    "autoscroll=i" => \$lopts{autoscroll},
    "apiurl=s" => \$lopts{apiurl},
+   "wait=i" => \$lopts{wait},
 ) or usage();
 
 # Load API key from onyphe rc file
@@ -48,6 +50,7 @@ $cli->log->level($lopts{verbose});
 $cli->apikey($lopts{apikey});
 $cli->apiurl($lopts{apiurl});
 $cli->autoscroll($lopts{autoscroll} ? 1 : 0);
+$cli->wait($lopts{wait});
 
 # Launch query
 my $r;
@@ -109,6 +112,7 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
                                            or remove (-) from output
    -encode <FIELD1,FIELD2,...FIELDn>       comma separated list of fields to Base64 encode
    -verbose <0|1|2|3>                      verbosity level (default: 0)
+   -wait <SECONDS>                         wait time in regards to rate limit (default: 2)
 
 EOF
 ;
@@ -194,7 +198,7 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2019, ONYPHE
+Copyright (c) 2018-2020, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

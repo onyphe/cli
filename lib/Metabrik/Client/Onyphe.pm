@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.04';
+our $VERSION = '1.06';
 
 use base qw(Metabrik);
 
@@ -19,12 +19,14 @@ sub brik_properties {
          apikey => [ qw(apikey) ],
          apiurl => [ qw(apiurl) ],
          autoscroll => [ qw(0|1) ],
+         wait => [ qw(seconds) ],
          _ao => [ qw(INTERNAL) ],
          _sb => [ qw(INTERNAL) ],
       },
       attributes_default => {
          apiurl => 'https://www.onyphe.io/api/v2',
          autoscroll => 0,
+         wait => 2,
       },
       commands => {
          user => [ ],
@@ -356,6 +358,9 @@ sub function_merge {
    return $return->();
 }
 
+#
+# Will remove everything from input stream on matches.
+#
 sub function_blacklist {
    my $self = shift;
    my ($r, $lookup) = @_;
@@ -393,20 +398,28 @@ sub function_blacklist {
    for my $page (@$r) {
       for my $this (@{$page->{results}}) {
          my $skip = 0;
+         # $field is the field to match against (example: domain):
          for my $field (@$fields) {
-            if (defined($self->_value($this, $field))) {
+            # Fetch the value from current result $this:
+            my $value = $self->_value($this, $field);
+            if (defined($value)) {
+               # Compare against all fields given in the CSV:
                for my $h (@$l) {
-                  if (exists($h->{$field})
-                  &&  $h->{$field} ne $self->_value($this, $field)) {
+                  if (exists($h->{$field}) && $h->{$field} eq $value) {
+                     #print "[DEBUG] skip field [$field] value [$value]\n";
                      $skip++;
                      last;
                   }
                }
             }
-            last if $skip == $fields_count;
+            # When all fields have matched, no need to compare with remaining
+            if ($skip == $fields_count) {
+               #print "[DEBUG] all fields matched [$skip]\n";
+               last;
+            }
          }
-         if ($skip != $fields_count) { # Not all fields have matched,
-                                       # we keep results.
+         if ($skip != $fields_count) { # Not all fields have matched, it is
+                                       # NOT blacklisted, we keep results
             push @new, $this;
          }
       }
@@ -415,6 +428,9 @@ sub function_blacklist {
    return $return->();
 }
 
+#
+# Will keep everything from input stream on matches.
+#
 sub function_whitelist {
    my $self = shift;
    my ($r, $lookup) = @_;
@@ -452,18 +468,28 @@ sub function_whitelist {
    for my $page (@$r) {
       for my $this (@{$page->{results}}) {
          my $skip = 0;
+         # $field is the field to match against (example: domain):
          for my $field (@$fields) {
-            if (defined($self->_value($this, $field))) {
+            # Fetch the value from current result $this:
+            my $value = $self->_value($this, $field);
+            if (defined($value)) {
+               # Compare against all fields given in the CSV:
                for my $h (@$l) {
-                  if (exists($h->{$field}) && $h->{$field} eq $self->_value($this, $field)) {
+                  if (exists($h->{$field}) && $h->{$field} eq $value) {
+                     #print "[DEBUG] skip field [$field] value [$value]\n";
                      $skip++;
                      last;
                   }
                }
             }
-            last if $skip == $fields_count;
+            # When all fields have matched, no need to compare with remaining
+            if ($skip == $fields_count) {
+               #print "[DEBUG] all fields matched [$skip]\n";
+               last;
+            }
          }
-         if ($skip != $fields_count) { # No all fields have matched, we keep results.
+         if ($skip == $fields_count) { # All fields have matched, it is
+                                       # whitelisted, we keep results.
             push @new, $this;
          }
       }
@@ -895,7 +921,7 @@ L<Metabrik>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2019, ONYPHE
+Copyright (c) 2018-2020, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

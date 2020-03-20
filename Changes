@@ -1,5 +1,10 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.06 Fri 20 Mar 09:30:03 CET 2020
+   - new: -wait command line option to change wait time between requests
+   - bugfix: whitelist function keeps results matching criterias from a CSV
+   - bugfix: blacklist function removes results matching criterias from a CSV
+
 1.05 Wed 18 Mar 08:53:52 CET 2020
    - update: API v2
    - new: topsite, vulnscan, datamd5, domain and hostname API v2
