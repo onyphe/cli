@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.06';
+our $VERSION = '1.07';
 
 use base qw(Metabrik);
 
@@ -790,7 +790,12 @@ sub output_json {
 
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
-   return $sj->encode($results);
+   my $r = $results->[0]{results};
+   for (@$r) {
+      print $sj->encode($_)."\n";
+   }
+
+   return "";
 }
 
 1;

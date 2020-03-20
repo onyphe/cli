@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.07
+   - UPDATE: JSON output is now line-based. One result is one JSON line.
+
 1.06 Fri 20 Mar 09:30:03 CET 2020
    - new: -wait command line option to change wait time between requests
    - bugfix: whitelist function keeps results matching criterias from a CSV
