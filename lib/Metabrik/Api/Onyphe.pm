@@ -305,6 +305,9 @@ sub export {
    # Will store incomplete line for later processing
    my $buf = '';
 
+   # To keep state between each page of results
+   my $state = {};
+
    my $cv = AnyEvent->condvar;
 
    AnyEvent::HTTP::http_get($url,
@@ -334,7 +337,7 @@ sub export {
             my @lines = split(/\n/, $this);
             $buf = $tail || '';
 
-            $callback->(\@lines);
+            $callback->(\@lines, $state);
          }
          else {
             print STDERR "ERROR: status [$status]\n";
