@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.08';
+our $VERSION = '1.09';
 
 use base qw(Metabrik);
 
@@ -27,7 +27,7 @@ sub brik_properties {
       attributes_default => {
          apiurl => 'https://www.onyphe.io/api/v2',
          autoscroll => 0,
-         wait => 2,
+         wait => 1,
       },
       commands => {
          user => [ ],
@@ -635,9 +635,16 @@ sub function_dedup {
    for my $page (@$r) {
       for my $this (@{$page->{results}}) {
          my $value = $self->_value($this, $field) or next;
+         $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
          # Results are ordered in latest time first, thus we keep the freshest result.
-         if (! exists($dedup{$value})) {
-            $dedup{$value}++;
+         my $new = 0;
+         for my $v (@$value) {
+            if (! exists($dedup{$v})) {
+               $dedup{$v}++;
+               $new = 1;
+            }
+         }
+         if ($new) {
             push @new, $this;
          }
       }

@@ -23,7 +23,7 @@ sub brik_properties {
       },
       attributes_default => {
          apiurl => 'https://www.onyphe.io/api/v2',
-         wait => 2,
+         wait => 1,
          master => 0,
       },
       commands => {
@@ -57,6 +57,7 @@ sub brik_properties {
       require_modules => {
          'AnyEvent' => [ ],
          'AnyEvent::HTTP' => [ ],
+         'URI::Escape' => [ ],
       },
    };
 }
@@ -87,11 +88,13 @@ sub api {
    my @r = ();
    if ($ref eq 'ARRAY') {
       for my $this (@$arg) {
+         $this = URI::Escape::uri_escape_utf8($this);
          my $res = $self->api($api, $this, $apikey, $page) or next;
          push @r, @$res;
       }
    }
    else {
+      $arg = URI::Escape::uri_escape_utf8($arg);
    RETRY:
       my $url = $apiurl.'/'.$api.'/'.$arg;
       if (defined($page)) {
@@ -284,6 +287,7 @@ sub export {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
 
    my $apiurl = $self->apiurl;
+   $query = URI::Escape::uri_escape_utf8($query);
 
    $self->log->verbose("export: using url[$apiurl]");
 
@@ -334,6 +338,7 @@ sub export {
          }
          else {
             print STDERR "ERROR: status [$status]\n";
+            print $data."\n";
             return $cv->send;
          }
  

@@ -16,7 +16,7 @@ my %lopts = (
    page => '1',
    autoscroll => '0',
    apiurl => 'https://www.onyphe.io/api/v2',
-   wait => 2,
+   wait => 1,
 );
 
 # Option parsing
@@ -123,7 +123,7 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
                                            or remove (-) from output
    -encode <FIELD1,FIELD2,...FIELDn>       comma separated list of fields to Base64 encode
    -verbose <0|1|2|3>                      verbosity level (default: 0)
-   -wait <SECONDS>                         wait time in regards to rate limit (default: 2)
+   -wait <SECONDS>                         wait time in regards to rate limit (default: 1)
 
 EOF
 ;
