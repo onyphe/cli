@@ -31,7 +31,7 @@ sub run {
    my @new = ();
    for my $page (@$r) {
       for my $this (@{$page->{results}}) {
-         my $value = $self->_value($this, $field) or next;
+         my $value = $self->value($this, $field) or next;
          $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
          # Results are ordered in latest time first, thus we keep the freshest result.
          my $new = 0;
@@ -47,12 +47,7 @@ sub run {
       }
    }
 
-   # Return new result set.
-   return [ {
-      %{$r->[0]},            # Keep results information from first page only
-      count => scalar(@new), # Overwrite count value
-      results => \@new,      # Overwrite results value
-   } ];
+   return $self->return($r, \@new);
 }
 
 1;

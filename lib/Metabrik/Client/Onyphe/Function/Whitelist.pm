@@ -35,18 +35,10 @@ sub run {
 
    my @new = ();
 
-   my $return = sub {
-      return [ {
-         %{$r->[0]},            # Keep results information from first page only
-         count => scalar(@new), # Overwrite count value
-         results => \@new,      # Overwrite results value
-      } ];
-   };
-
    my $last = 0;
    $SIG{INT} = sub {
       $last = 1;
-      return $return->();
+      return $self->return($r, \@new);
    };
 
    for my $page (@$r) {
@@ -55,7 +47,7 @@ sub run {
          # $field is the field to match against (example: domain):
          for my $field (@$fields) {
             # Fetch the value from current result $this:
-            my $value = $self->_value($this, $field);
+            my $value = $self->value($this, $field);
             if (defined($value)) {
                $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
                # Compare against all fields given in the CSV:
@@ -85,7 +77,7 @@ sub run {
       }
    }
 
-   return $return->();
+   return $self->return($r, \@new);
 }
 
 1;

@@ -323,23 +323,6 @@ sub export_pipeline {
    return 1;
 }
 
-sub _value {
-   my $self = shift;
-   my ($h, $field) = @_;
-
-   my @words = split(/\./, $field);
-   my $value = $h->{$words[0]};
-   for (1..$#words) {
-      $value = $value->{$words[$_]};
-   }
-
-   if (! defined($value)) {
-      return $self->log->error("value: no value found for field [$field]");
-   }
-
-   return $value;
-}
-
 sub search_pipeline {
    my $self = shift;
    my ($pipeline, $page, $maxpage) = @_;
