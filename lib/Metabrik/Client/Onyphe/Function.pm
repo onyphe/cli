@@ -15,45 +15,70 @@ sub brik_properties {
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
          value => [ qw(doc field) ],
-         return => [ qw(results new state|OPTIONAL) ],
+         value_as_array => [ qw(doc field) ],
+         iter => [ qw(page callback) ],
+         return => [ qw(page new state|OPTIONAL) ],
       },
    };
 }
 
 sub value {
    my $self = shift;
-   my ($h, $field) = @_;
+   my ($doc, $field) = @_;
 
-   $self->brik_help_run_undef_arg('value', $h) or return;
+   $self->brik_help_run_undef_arg('value', $doc) or return;
    $self->brik_help_run_undef_arg('value', $field) or return;
 
    my @words = split(/\./, $field);
    # Iterate over objects elements:
-   my $value = $h->{$words[0]};
+   my $value = $doc->{$words[0]};
    for (1..$#words) {
       $value = $value->{$words[$_]};
-   }
-
-   if (! defined($value)) {
-      return $self->log->error("value: no value found for field [$field]");
    }
 
    return $value;
 }
 
+sub value_as_array {
+   my $self = shift;
+   my ($doc, $field) = @_;
+
+   $self->brik_help_run_undef_arg('value_as_array', $doc) or return;
+   $self->brik_help_run_undef_arg('value_as_array', $field) or return;
+
+   my $value = $self->value($doc, $field) or return;
+   $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
+
+   return $value;
+}
+
+sub iter {
+   my $self = shift;
+   my ($page, $cb, $state, @args) = @_;
+
+   my @new = ();
+
+   for my $this (@{$page->{results}}) {
+      # If callback returns undef, we consider it a fatal error, we abort.
+      $cb->($this, $state, \@new, @args) or return;
+   }
+
+   return $self->return($page, \@new);
+}
+
 sub return {
    my $self = shift;
-   my ($r, $new, $state) = @_;
+   my ($page, $new, $state) = @_;
 
    $self->brik_help_run_undef_arg('return', $new) or return;
    $self->brik_help_run_invalid_arg('return', $new, 'ARRAY') or return;
 
-   return [ {
-      %{$r->[0]},             # Keep results information from first page only
+   return {
+      %$page,                 # Get defaults results, then overwrite some
       count => scalar(@$new), # Overwrite count value
       results => $new,        # Overwrite results value
       state => $state,
-   } ];
+   };
 }
 
 1;

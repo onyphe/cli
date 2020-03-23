@@ -1,9 +1,15 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
-1.10
+2.00
+   - UPDATE: rework internal format, now called a "page"
    - update: functions are no more forced to have a parameter
    - update: print error messages on STDERR
    - new: functions can keep state between calls to support streaming mode
+   - new: streaming-like mode for search, works the same as export
+   - bugfix: abort on Ctrl+C on Export API
+   - remove: -output parameter on bin/onyphe
+   - remove: -fields parameter on bin/onyphe
+   - remove: -encode parameter on bin/onyphe
 
 1.09 Sun 22 Mar 12:04:38 CET 2020
    - update: wait time is now 1 second as ONYPHE accepts 1 request per second

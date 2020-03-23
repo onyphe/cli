@@ -12,3 +12,4 @@ README
 t/01-use.t
 t/02-pod-coverage.t
 t/03-test-pod.t
+t/04-use-functions.t

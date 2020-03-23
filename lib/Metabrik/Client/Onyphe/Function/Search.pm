@@ -14,43 +14,35 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(results search state|OPTIONAL) ],
+         run => [ qw(page state search) ],
       },
    };
 }
 
 sub run {
    my $self = shift;
-   my ($r, $search) = @_;
+   my ($page, $state, $search) = @_;
 
-   $self->brik_help_run_undef_arg('run', $r) or return;
-   $self->brik_help_run_invalid_arg('run', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('run', $page) or return;
    $self->brik_help_run_undef_arg('run', $search) or return;
 
-   my @new = ();
+   my $cb = sub {
+      my ($this, $state, $new, $search) = @_;
 
-   my $last = 0;
-   $SIG{INT} = sub {
-      $last = 1;
-      return $self->return($r, \@new);
+      # Update search clause with placeholder values
+      my $copy = $search;
+      while ($copy =~
+         s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->value($this, $2)]}}) {
+      }
+      my $this_page = $self->search($copy, 1, 1) or return;
+      if ($this_page->{count} > 0) {  # Check only first page of results.
+         push @$new, @{$this_page->{results}}; # Keep this page if matches were found.
+      }
+
+      return 1;
    };
 
-   for my $page (@$r) {
-      for my $this (@{$page->{results}}) {
-         # Update search clause with placeholder values
-         my $copy = $search;
-         while ($copy =~
-            s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->value($this, $2)]}}) {
-         }
-         my $this_r = $self->search($copy, 1, 1) or return;
-         if ($this_r->[0]{count} > 0) {  # Check only first page of results.
-            push @new, @{$this_r->[0]{results}}; # Keep these results if matche
-s were found.
-         }
-      }
-   }
-
-   return $self->return($r, \@new);
+   return $self->iter($page, $cb, $state, $search);
 }
 
 1;

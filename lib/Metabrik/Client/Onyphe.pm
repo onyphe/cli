@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.10';
+our $VERSION = '2.00';
 
 use base qw(Metabrik);
 
@@ -35,13 +35,6 @@ sub brik_properties {
          summary => [ qw(api value) ],
          search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
          export => [ qw(query) ],
-         output_dump => [ qw(results) ],
-         output => [ qw(
-            results fields|OPTIONAL encode|OPTIONAL separator|OPTIONAL cb|OPTIONAL
-         ) ],
-         output_csv => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
-         output_psv => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
-         output_json => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
@@ -80,9 +73,9 @@ sub user {
 
 sub simple {
    my $self = shift;
-   my ($api, $value, $page, $maxpage) = @_;
+   my ($api, $value, $currentpage, $maxpage) = @_;
 
-   $page ||= 1;
+   $currentpage ||= 1;
    my $apikey = $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('simple', $api) or return;
@@ -98,34 +91,30 @@ sub simple {
       return $self->log->error("simple: api [$api] unknown");
    }
 
-   $self->log->verbose("simple: requesting page [$page]");
+   $self->log->verbose("simple: requesting page [$currentpage]");
 
-   my @r = ();
-   my $results = $ao->$api($value, $apikey, $page) or return;
-   push @r, @$results;
+   my $page = $ao->$api($value, $apikey, $currentpage) or return;
 
-   $maxpage ||= $results->[0]{max_page} || 1;
+   $maxpage ||= $page->{max_page} || 1;
    $self->log->verbose("simple: maxpage is [$maxpage]");
 
-   $self->log->info("simple: page [$page/$maxpage] fetched");
+   $self->log->info("simple: page [$currentpage/$maxpage] fetched");
 
-   if ($self->autoscroll && ++$page <= $maxpage) {
+   if ($self->autoscroll && ++$currentpage <= $maxpage) {
       my $last = 0;
       $SIG{INT} = sub {
          $last = 1;
-         return \@r; 
       };
-      for ($page..$maxpage) {
+      for ($currentpage..$maxpage) {
          $self->log->verbose("simple: scrolling page [$_]");
-         my $results = $ao->$api($value, $apikey, $_) or return;
-         push @r, @$results;
+         $ao->$api($value, $apikey, $_) or return;
          my $perc = sprintf("%.02f%%", $_ / $maxpage * 100);
          $self->log->info("simple: page [$_/$maxpage] fetched ($perc)...");
          last if $last;
       }
    }
 
-   return \@r;
+   return 1;
 }
 
 sub summary {
@@ -152,9 +141,9 @@ sub summary {
 
 sub search {
    my $self = shift;
-   my ($query, $page, $maxpage) = @_;
+   my ($query, $currentpage, $maxpage, $callback) = @_;
 
-   $page ||= 1;
+   $currentpage ||= 1;
    my $apikey = $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('search', $query) or return;
@@ -169,38 +158,28 @@ sub search {
          "'category:CATEGORY'");
    }
 
-   $self->log->verbose("search: requesting page [$page]");
+   my $page = $ao->search($query, $apikey, $currentpage, $callback) or return;
 
-   my @r = ();
-   my $results = $ao->search($query, $apikey, $page) or return;
-   if (ref($results) ne 'ARRAY') {
-      return $self->log->error("search: not an ARRAY [".Data::Dumper::Dumper($results).
-         "]");
-   }
-   push @r, @$results;
-
-   $maxpage ||= $results->[0]{max_page};
+   $maxpage ||= $page->{max_page};
    $self->log->verbose("search: maxpage is [$maxpage]");
 
-   $self->log->info("search: page [$page/$maxpage] fetched");
+   $self->log->info("search: page [$currentpage/$maxpage] fetched");
 
-   if ($self->autoscroll && ++$page <= $maxpage) {
+   if ($self->autoscroll && ++$currentpage <= $maxpage) {
       my $last = 0;
       $SIG{INT} = sub {
          $last = 1;
-         return \@r;
       };
-      for ($page..$maxpage) {
+      for ($currentpage..$maxpage) {
          $self->log->verbose("search: scrolling page [$_]");
-         my $results = $ao->search($query, $apikey, $_) or return;
-         push @r, @$results;
+         $ao->search($query, $apikey, $_, $callback) or return;
          my $perc = sprintf("%.02f%%", $_ / $maxpage * 100);
          $self->log->info("search: page [$_/$maxpage] fetched ($perc)...");
          last if $last;
       }
    }
 
-   return \@r;
+   return 1;
 }
 
 sub export {
@@ -223,18 +202,7 @@ sub export {
          "'category:CATEGORY'");
    }
 
-   # Default callback
-   $callback ||= sub {
-      my ($lines) = @_;
-
-      for (@$lines) {
-         print "$_\n";
-      }
-
-      return 1;
-   };
-
-   $ao->export($query, $callback, $apikey);
+   $ao->export($query, $callback, $apikey) or return;
 
    return 1;
 }
@@ -262,21 +230,7 @@ sub export_pipeline {
    $self->log->verbose("export_pipeline: query[$query]");
 
    my $callback = sub {
-      my ($lines, $state) = @_;
-
-      # Nothing in this round
-      if (@$lines == 0) {
-         return 1;
-      }
-
-      $self->log->debug("callback: lines [".scalar(@$lines)."]");
-
-      # Convert to result format to process with functions:
-      my @results = ();
-      for (@$lines) {
-         push @results, $sj->decode($_);
-      }
-      my $r = [{ results => \@results }];
+      my ($page, $state) = @_;
 
       for my $this (@cmd) {
          $this =~ s{[\s\r\n]*$}{};
@@ -308,13 +262,13 @@ sub export_pipeline {
 
          $self->log->verbose("export_pipeline: function[$function]");
 
-         $r = $function->run($r, $state, $argument);
-         last if (!defined($r));
+         $page = $function->run($page, $state, $argument);
+         last if (!defined($page));
       }
 
-      if (defined($r)) {
+      if (defined($page)) {
          # Put back in line format
-         $lines = $r->[0]{results};
+         my $lines = $page->{results};
 
          for (@$lines) {
             print $sj->encode($_)."\n";
@@ -331,9 +285,9 @@ sub export_pipeline {
 
 sub search_pipeline {
    my $self = shift;
-   my ($pipeline, $page, $maxpage) = @_;
+   my ($pipeline, $currentpage, $maxpage) = @_;
 
-   $page ||= 1;
+   $currentpage ||= 1;
    $self->brik_help_run_undef_arg('search_pipeline', $pipeline) or return;
 
    my @cmd = split(/\s*\|\s*-?/, $pipeline);
@@ -348,251 +302,62 @@ sub search_pipeline {
          "with 'category:CATEGORY'");
    }
 
-   my $r = $self->search($query, $page, $maxpage) or return;
-
-   # And others are the pipelined commands
-   for my $this (@cmd) {
-      $this =~ s{[\s\r\n]*$}{};
-      $self->log->verbose("search_pipeline: cmd[$this]");
-      my @function = $this =~ m{^(\w+)(?:\s+(.+))?$};
-      if (! defined($function[0])) {
-         printf STDERR "ERROR: search_pipeline: parse failed for [$this]\n";
-         return;
-      }
-
-      # Load function
-      my $module = 'Metabrik::Client::Onyphe::Function::'.
-         ucfirst(lc($function[0]));
-      eval("use $module;");
-      if ($@) {
-         chomp($@);
-         printf STDERR "ERROR: search_pipeline: unknown function ".
-            "[$function[0]]\n";
-         return;
-      }
-      my $function = $module->new_from_brik_init($self);
-      if (!defined($function)) {
-         printf STDERR "ERROR: search_pipeline: load function failed ".
-            "[$function[0]]\n";
-         return;
-      }
-
-      my $argument = $function[1];
-
-      $self->log->verbose("search_pipeline: function[$function]");
-
-      # XXX: update to keep state
-      $r = $function->run($r, undef, $argument);
-      last if (!defined($r));
-   }
-
-   return $r;
-}
-
-sub _rec_header_from_result {
-   my $self = shift;
-   my ($r, $prev) = @_;
-
-   my %header = ();
-   for my $k (keys %$r) {
-      if (ref($r->{$k}) eq 'HASH') {
-         my $list = $self->_rec_header_from_result($r->{$k}, $k);
-         for (keys %$list) {
-            $header{"$k.$_"}++;
-         }
-      }
-      else {
-         $header{$k}++;
-      }
-   }
-
-   return \%header;
-}
-
-sub _build_header {
-   my $self = shift;
-   my ($results) = @_;
-
-   my %header = ();
-   for my $r (@$results) {
-      my $ary = $r->{results};
-      for my $this (@$ary) {
-         my $list = $self->_rec_header_from_result($this);
-         for (keys %$list) {
-            $header{$_}++;
-         }
-      }
-   }
-
-   #print "HEADER: ".Data::Dumper::Dumper(\%header)."\n";
-
-   return \%header;
-}
-
-sub output_dump {
-   my $self = shift;
-   my ($results) = @_;
-
-   $self->brik_help_run_undef_arg('output_dump', $results) or return;
-   $self->brik_help_run_invalid_arg('output_dump', $results, 'ARRAY') or return;
-
-   return Data::Dumper::Dumper($results);
-}
-
-sub output {
-   my $self = shift;
-   my ($results, $fields, $encode, $sep, $cb) = @_;
-
-   $sep ||= '|';
-   $fields ||= '';
-   $encode ||= '';
-   $self->brik_help_run_undef_arg('output', $results) or return;
-   $self->brik_help_run_invalid_arg('output', $results, 'ARRAY') or return;
-
-   my $sb = $self->_sb;
-
-   # Do nothing by default.
-   $cb ||= sub {
-      my ($line) = @_;
-      return $line;
-   };
-
-   my $summary = '';
-   my $header = $self->_build_header($results) or return;
-
-   my $string;
-   my $action;
-   my %fields = ();
-   if (length($fields)) {
-      ($action, $string) = $fields =~ m{^\s*((?:\-|\+))?(.+)\s*$};
-      $action ||= '+';  # Default to only keep fields given
-      %fields = map { $_ => 1 } split(/\s*,\s*/, $string);
-      for (keys %$header) {
-         if ($action eq '+') {
-            next if ($fields{$_});
-            delete $header->{$_};
-         }
-         else {
-            next if (! $fields{$_});
-            delete $header->{$_};
-         }
-      }
-   }
-
-   my %encode = ();
-   if (length($encode)) {
-      %encode = map { $_ => 1 } split(/\s*,\s*/, $encode);
-   }
-
-   my @header = sort { $a cmp $b } keys %$header;
-   if (@header == 0) {
-      return $self->log->error("output: no header found");
-   }
-
-   print $cb->(join($sep, @header))."\n";
-
-   for my $r (@$results) {
-      my $ary = $r->{results};
-      for my $this (@$ary) {
-         my $line = '';
-         for my $k (sort { $a cmp $b } keys %$header) {
-            if (keys %fields > 0) {
-               next if ($action eq '+' && ! $fields{$k});
-               next if ($action eq '-' && $fields{$k});
-            }
-
-            my @words = split(/\./, $k);
-            my $value = $this;
-
-            my $count = 0;
-            # Traverse the HASH to find the leaf value.
-            for (@words) {
-               last if (!exists($value->{$_}));
-               $value = $value->{$_};
-               $count++;
-            }
-            if ($count != @words) {  # It means there is no value for this key.
-               $line .= $sep;
-               next;
-            }
-
-            # Leaf value reached (maybe empty)
-            if (! defined($value)) {
-               $line .= $sep;
-               next;
-            }
-            elsif (ref($value) eq 'ARRAY') {
-               $line .= join(',', @$value).$sep;
-            }
-            else {
-               if (length($encode) && exists($encode{$k})) {
-                  $line .= $sb->encode($value).$sep;
-               }
-               else {
-                  $line .= $value.$sep;
-               }
-            }
-         }
-
-         $line =~ s{$sep$}{};
-         $line = $cb->($line);
-         print "$line\n" if length($line);
-      }
-   }
-
-   return $summary;
-}
-
-sub output_csv {
-   my $self = shift;
-   my ($results, $fields, $encode) = @_;
-
-   $fields ||= '';
-   $self->brik_help_run_undef_arg('output_csv', $results) or return;
-   $self->brik_help_run_invalid_arg('output_csv', $results, 'ARRAY') or return;
-
-   my $cb = sub {
-      my ($line) = @_;
-      $line =~ s{^}{"};
-      $line =~ s{$}{"};
-      return $line;
-   };
-
-   return $self->output($results, $fields, $encode, '","', $cb);
-}
-
-sub output_psv {
-   my $self = shift;
-   my ($results, $fields, $encode) = @_;
-
-   $fields ||= '';
-   $self->brik_help_run_undef_arg('output_psv', $results) or return;
-   $self->brik_help_run_invalid_arg('output_psv', $results, 'ARRAY') or return;
-
-   my $cb = sub {
-      my ($line) = @_;
-      $line =~ s{^\||\|$}{}g;
-      return $line;
-   };
-
-   return $self->output($results, $fields, $encode, '|', $cb);
-}
-
-sub output_json {
-   my $self = shift;
-   my ($results) = @_;
-
-   $self->brik_help_run_undef_arg('output_json', $results) or return;
-   $self->brik_help_run_invalid_arg('output_json', $results, 'ARRAY') or return;
-
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
-   my $r = $results->[0]{results};
-   for (@$r) {
-      print $sj->encode($_)."\n";
-   }
+   $self->log->verbose("search_pipeline: query[$query]");
 
-   return "";
+   my $callback = sub {
+      my ($page, $state) = @_;
+
+      for my $this (@cmd) {
+         $this =~ s{[\s\r\n]*$}{};
+         $self->log->verbose("search_pipeline: cmd[$this]");
+         my @function = $this =~ m{^(\w+)(?:\s+(.+))?$};
+         if (! defined($function[0])) {
+            printf STDERR "ERROR: search_pipeline: parse failed for [$this]\n";
+            return;
+         }
+
+         # Load function
+         my $module = 'Metabrik::Client::Onyphe::Function::'.
+            ucfirst(lc($function[0]));
+         eval("use $module;");
+         if ($@) {
+            chomp($@);
+            printf STDERR "ERROR: search_pipeline: unknown function ".
+               "[$function[0]]\n";
+            return;
+         }
+         my $function = $module->new_from_brik_init($self);
+         if (!defined($function)) {
+            printf STDERR "ERROR: search_pipeline: load function failed ".
+               "[$function[0]]\n";
+            return;
+         }
+
+         my $argument = $function[1];
+
+         $self->log->verbose("search_pipeline: function[$function]");
+
+         $page = $function->run($page, $state, $argument);
+         last if (!defined($page));
+      }
+
+      if (defined($page)) {
+         # Put back in line format
+         my $lines = $page->{results};
+
+         for (@$lines) {
+            print $sj->encode($_)."\n";
+         }
+      }
+
+      return 1;
+   };
+
+   $self->search($query, $currentpage, $maxpage, $callback);
+
+   return 1;
 }
 
 1;
@@ -612,22 +377,22 @@ Metabrik::Client::Onyphe - official client for ONYPHE API access
    $cli->autoscroll(<0|1>);
 
    # Search first page of results only
-   my $results = $cli->search('category:datascan port:80');
+   my $page = $cli->search('category:datascan port:80');
 
    # Search given page of results
-   my $results = $cli->search('category:datascan port:80', 10);
+   my $page = $cli->search('category:datascan port:80', 10);
 
    # Search from page 10 to page 20 when autoscroll is active
    $cli->autoscroll(1);
-   my $results = $cli->search('category:datascan port:80', 10, 20);
+   my $page = $cli->search('category:datascan port:80', 10, 20);
 
    # Fetch all pages when autoscroll is active
    $cli->autoscroll(1);
-   my $results = $cli->search('category:datascan port:80');
+   my $page = $cli->search('category:datascan port:80');
 
    # Search using the simple API
-   my $results = $cli->datascan('apache');
-   my $results = $cli->reverse('8.8.8.8');
+   my $page = $cli->datascan('apache');
+   my $page = $cli->reverse('8.8.8.8');
 
 =head1 DESCRIPTION
 
@@ -702,26 +467,6 @@ Perform a search query by using | separated list of functions.
 =item B<export_pipeline>
 
 Perform an export query by using | separated list of functions.
-
-=item B<output_dump>
-
-Dump output using Perl's Data::Dumper
-
-=item B<output>
-
-Base command to other output modes.
-
-=item B<output_csv>
-
-Dump output in CSV format.
-
-=item B<output_psv>
-
-Dump output in PSV format.
-
-=item B<output_json>
-
-Dump output as JSON.
 
 =back
 

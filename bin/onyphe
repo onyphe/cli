@@ -12,7 +12,6 @@ use Metabrik::Client::Onyphe;
 my %lopts = (
    verbose => 0,
    onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
-   output => 'json',
    page => '1',
    autoscroll => '0',
    apiurl => 'https://www.onyphe.io/api/v2',
@@ -29,9 +28,6 @@ GetOptions(
    "export=s" => \$lopts{export},
    "verbose=i" => \$lopts{verbose},
    "apikey=s" => \$lopts{apikey},
-   "output=s" => \$lopts{output},
-   "fields=s" => \$lopts{fields},
-   "encode=s" => \$lopts{encode},
    "page=i" => \$lopts{page},
    "maxpage=i" => \$lopts{maxpage},
    "autoscroll=i" => \$lopts{autoscroll},
@@ -83,16 +79,6 @@ else {  # Simple API query mode
       or $cli->log->fatal("simple: aborted");
 }
 
-# Output results
-if (defined($r)) {
-   my $output_mode = 'output_'.$lopts{output};
-   my $output = $cli->$output_mode($r, $lopts{fields}, $lopts{encode});
-   if (! defined($output)) {
-      $cli->log->fatal("$output_mode: aborted");
-   }
-   print $output;
-}
-
 exit(0);
 
 #
@@ -113,15 +99,10 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
    -summary <API>                          use Summary API for query (need -value)
    -simple <API>                           use Simple API for query (need -value)
    -value <VALUE>                          value to use when using Simple or Summary API
-   -output <MODE>                          output mode (default: json)
-                                           Modes: dump, csv, psv, json
    -page <PAGE>                            fetch results for page (default: 1)
    -autoscroll <0|1>                       use autoscroll feature (default: 0)
                                            WARNING: may consume a lot of credit
    -maxpage <MAXPAGE>                      max page to fetch in autoscroll mode
-   -fields <-|+><FIELD1,FIELD2,...FIELDn>  comma separated list of fields to display (+)
-                                           or remove (-) from output
-   -encode <FIELD1,FIELD2,...FIELDn>       comma separated list of fields to Base64 encode
    -verbose <0|1|2|3>                      verbosity level (default: 0)
    -wait <SECONDS>                         wait time in regards to rate limit (default: 1)
 
@@ -178,11 +159,6 @@ sub sanity_checks {
 
    if (! ($lopts{simple} || $lopts{summary}) && defined($lopts{value})) {
       print "ERROR: -simple argument missing but -value argument used\n";
-      usage();
-   }
-
-   if ($lopts{output} !~ m{^(?:csv|psv|dump|json)$}) {
-      print "ERROR: invalid output chosen: ".$lopts{output}."\n";
       usage();
    }
 

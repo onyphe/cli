@@ -14,31 +14,28 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(results undef state|OPTIONAL) ],
+         run => [ qw(page state|OPTIONAL) ],
       },
    };
 }
 
 sub run {
    my $self = shift;
-   my ($r, undef, $state) = @_;
+   my ($page, $state) = @_;
 
-   $self->brik_help_run_undef_arg('run', $r) or return;
-   $self->brik_help_run_invalid_arg('run', $r, 'ARRAY') or return;
+   $self->brik_help_run_undef_arg('run', $page) or return;
 
-   my $count = $state->{count}{count} || 0;
+   my $cb = sub {
+      my ($this, $state, $new) = @_;
 
-   my @new = ();
-   for my $page (@$r) {
-      my $count = $page->{count};
-      for my $this (@{$page->{results}}) {
-         $state->{count}{count}++;
-         $this->{count} = $state->{count}{count};
-         push @new, $this;
-      }
-   }
+      $state->{addcount}{count}++;
+      $this->{count} = $state->{addcount}{count};
+      push @$new, $this;
 
-   return $self->return($r, \@new, $state);
+      return 1;
+   };
+
+   return $self->iter($page, $cb, $state);
 }
 
 1;

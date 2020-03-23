@@ -55,6 +55,7 @@ sub brik_properties {
         export => [ qw(query callback apikey|OPTIONAL) ],
       },
       require_modules => {
+         'Metabrik::String::Json' => [ ],
          'AnyEvent' => [ ],
          'AnyEvent::HTTP' => [ ],
          'URI::Escape' => [ ],
@@ -64,18 +65,16 @@ sub brik_properties {
 
 sub api {
    my $self = shift;
-   my ($api, $arg, $apikey, $page) = @_;
+   my ($api, $arg, $apikey, $currentpage, $callback) = @_;
 
    $apikey ||= $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('api', $api) or return;
    $self->brik_help_run_undef_arg('api', $arg) or return;
-   my $ref = $self->brik_help_run_invalid_arg('api', $arg, 'SCALAR', 'ARRAY')
-      or return;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
 
    my $wait = $self->wait;
 
-   $api =~ s{_}{/}g;
+   my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
    my $apiurl = $self->apiurl;
    $self->add_headers({
@@ -85,49 +84,49 @@ sub api {
 
    $self->log->verbose("api: using url[$apiurl]");
 
-   my @r = ();
-   if ($ref eq 'ARRAY') {
-      for my $this (@$arg) {
-         $this = URI::Escape::uri_escape_utf8($this);
-         my $res = $self->api($api, $this, $apikey, $page) or next;
-         push @r, @$res;
+   $arg = URI::Escape::uri_escape_utf8($arg);
+
+   # Default callback
+   $callback ||= sub {
+      my ($page) = @_;
+
+      my $results = $page->{results};
+      if (defined($results)) {
+         for (@$results) {
+            print $sj->encode($_)."\n";
+         }
       }
+
+      return $page;
+   };
+
+   my $url = $apiurl.'/'.$api.'/'.$arg;
+   if (defined($currentpage)) {
+      $url .= '?page='.$currentpage;
+   }
+
+   my $page;
+
+   RETRY:
+
+   my $res = $self->get($url);
+   my $code = $self->code;
+   if ($code == 429) {
+      $self->log->verbose("api: request limit reached, waiting before retry");
+      if (defined($wait) && $wait > 0) {
+         sleep($wait);
+      }
+      goto RETRY;
+   }
+   elsif ($code == 400) {
+      print STDERR "ERROR: api: bad request\n";
+      $page = $self->content;
    }
    else {
-      $arg = URI::Escape::uri_escape_utf8($arg);
-   RETRY:
-      my $url = $apiurl.'/'.$api.'/'.$arg;
-      if (defined($page)) {
-         $url .= '?page='.$page;
-      }
-
-      my $res = $self->get($url);
-      my $code = $self->code;
-      if ($code == 429) {
-         $self->log->verbose("api: request limit reached, waiting before retry");
-         if (defined($wait) && $wait > 0) {
-            sleep($wait);
-         }
-         goto RETRY;
-      }
-      elsif ($code == 200) {
-         my $content = $self->content;
-         if ($content->{status} eq 'nok') {
-            my $text = $content->{text};
-            return $self->log->error("api: got error with text [$text]");
-         }
-         else {
-            $content->{arg} = $arg;  # Add the IP or other info,
-                                     # in case an ARRAY was requested.
-            push @r, $content;
-         }
-      }
-      else {
-         return $self->log->error("api: error code [$code] for api [$api] query [$arg]");
-      }
+      $page = $self->content;
    }
 
-   return \@r;
+   return $callback->($page);
 }
 
 sub geoloc {
@@ -265,9 +264,9 @@ sub datamd5 {
 
 sub search {
    my $self = shift;
-   my ($query, $apikey, $page) = @_;
+   my ($query, $apikey, $page, $callback) = @_;
 
-   return $self->api('search', $query, $apikey, $page);
+   return $self->api('search', $query, $apikey, $page, $callback);
 }
 
 sub user {
@@ -288,6 +287,8 @@ sub export {
 
    my $apiurl = $self->apiurl;
    $query = URI::Escape::uri_escape_utf8($query);
+
+   my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
    $self->log->verbose("export: using url[$apiurl]");
 
@@ -350,7 +351,13 @@ sub export {
             my @lines = split(/\n/, $this);
             $buf = $tail || '';
 
-            my $r = $callback->(\@lines, $state);
+            # Put in page format
+            my $page;
+            for (@lines) {
+               push @{$page->{results}}, $sj->decode($_);
+            }
+
+            my $r = $callback->($page, $state);
             if (! defined($r)) {
                return $cv->send;
             }
@@ -371,6 +378,17 @@ sub export {
          if ($status != 200 && $status != 598) {
             #print STDERR "ERROR: completion: status [$status]\n";
             #print Data::Dumper::Dumper($hdr)."\n";
+         }
+
+         # Handle remaining $buf if any:
+         if (defined($buf) && length($buf)) {
+            my @lines = split(/\n/, $buf);
+            # Put in page format
+            my $page;
+            for (@lines) {
+               push @{$page->{results}}, $sj->decode($_);
+            }
+            $callback->($page, $state);
          }
 
          return $cv->send;
