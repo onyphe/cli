@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(results csv) ],
+         run => [ qw(results csv state|OPTIONAL) ],
       },
    };
 }

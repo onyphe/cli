@@ -282,9 +282,9 @@ sub export {
    my ($query, $callback, $apikey) = @_;
 
    $apikey ||= $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('export', $query) or return;
    $self->brik_help_run_undef_arg('export', $callback) or return;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
 
    my $apiurl = $self->apiurl;
    $query = URI::Escape::uri_escape_utf8($query);
@@ -311,6 +311,7 @@ sub export {
    my $cv = AnyEvent->condvar;
 
    AnyEvent::HTTP::http_get($url,
+      timeout => 30,
       headers => {
          'Authorization' => "apikey $apikey",
          'Content-Type' => "application/json",
@@ -337,10 +338,13 @@ sub export {
             my @lines = split(/\n/, $this);
             $buf = $tail || '';
 
-            $callback->(\@lines, $state);
+            my $r = $callback->(\@lines, $state);
+            if (! defined($r)) {
+               return $cv->send;
+            }
          }
          else {
-            print STDERR "ERROR: status [$status]\n";
+            #print STDERR "ERROR: loop: status [$status]\n";
             print $data."\n";
             return $cv->send;
          }
@@ -352,7 +356,10 @@ sub export {
          my (undef, $hdr) = @_;
  
          my $status = $hdr->{Status};
-         #print STDERR "status [$status]\n";
+         if ($status != 200 && $status != 598) {
+            #print STDERR "ERROR: completion: status [$status]\n";
+            #print Data::Dumper::Dumper($hdr)."\n";
+         }
 
          return $cv->send;
       },

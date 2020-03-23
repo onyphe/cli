@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '1.09';
+our $VERSION = '1.10';
 
 use base qw(Metabrik);
 
@@ -243,8 +243,6 @@ sub export_pipeline {
    my $self = shift;
    my ($pipeline) = @_;
 
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('export_pipeline', $pipeline) or return;
 
    my @cmd = split(/\s*\|\s*-?/, $pipeline);
@@ -266,6 +264,13 @@ sub export_pipeline {
    my $callback = sub {
       my ($lines, $state) = @_;
 
+      # Nothing in this round
+      if (@$lines == 0) {
+         return 1;
+      }
+
+      $self->log->debug("callback: lines [".scalar(@$lines)."]");
+
       # Convert to result format to process with functions:
       my @results = ();
       for (@$lines) {
@@ -276,10 +281,10 @@ sub export_pipeline {
       for my $this (@cmd) {
          $this =~ s{[\s\r\n]*$}{};
          $self->log->verbose("export_pipeline: cmd[$this]");
-         my @function = $this =~ m{^(\w+)\s+(.+)$};
-         if (! defined($function[0]) || ! defined($function[1])) {
-            return $self->log->error("export_pipeline: parse failed ".
-               "for [$this]");
+         my @function = $this =~ m{^(\w+)(?:\s+(.+))?$};
+         if (! defined($function[0])) {
+            printf STDERR "ERROR: export_pipeline: parse failed for [$this]\n";
+            return;
          }
 
          # Load function
@@ -288,31 +293,32 @@ sub export_pipeline {
          eval("use $module;");
          if ($@) {
             chomp($@);
-            return $self->log->error("export_pipeline: unknown function ".
-               "[$function[0]]");
+            printf STDERR "ERROR: export_pipeline: unknown function ".
+               "[$function[0]]\n";
+            return;
          }
-         my $function = $module->new_from_brik_init($self)
-            or return $self->log->error("export_pipeline: load function ".
-               "failed [$function[0]]");
+         my $function = $module->new_from_brik_init($self);
+         if (!defined($function)) {
+            printf STDERR "ERROR: export_pipeline: load function failed ".
+               "[$function[0]]\n";
+            return;
+         }
 
-         # Handle arguments
          my $argument = $function[1];
-         if (! defined($argument) || ! length($argument)) {
-            return $self->log->error("export_pipeline: unknown argument ".
-               "[$argument]");
-         }
 
-         $self->log->verbose("export_pipeline: function[$function] ".
-            "argument[$argument]");
+         $self->log->verbose("export_pipeline: function[$function]");
 
-         $r = $function->run($r, $argument) or return;
+         $r = $function->run($r, $argument, $state);
+         last if (!defined($r));
       }
 
-      # Put back in line format
-      $lines = $r->[0]{results};
+      if (defined($r)) {
+         # Put back in line format
+         $lines = $r->[0]{results};
 
-      for (@$lines) {
-         print $sj->encode($_)."\n";
+         for (@$lines) {
+            print $sj->encode($_)."\n";
+         }
       }
 
       return 1;
@@ -328,8 +334,6 @@ sub search_pipeline {
    my ($pipeline, $page, $maxpage) = @_;
 
    $page ||= 1;
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('search_pipeline', $pipeline) or return;
 
    my @cmd = split(/\s*\|\s*-?/, $pipeline);

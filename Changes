@@ -1,5 +1,10 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+1.10
+   - update: functions are no more forced to have a parameter
+   - update: print error messages on STDERR
+   - new: functions can keep state between calls to support streaming mode
+
 1.09 Sun 22 Mar 12:04:38 CET 2020
    - update: wait time is now 1 second as ONYPHE accepts 1 request per second
    - bugfix: dedup function to support array-type fields

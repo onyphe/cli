@@ -15,7 +15,7 @@ sub brik_properties {
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
          value => [ qw(doc field) ],
-         return => [ qw(results new) ],
+         return => [ qw(results new state|OPTIONAL) ],
       },
    };
 }
@@ -43,7 +43,7 @@ sub value {
 
 sub return {
    my $self = shift;
-   my ($r, $new) = @_;
+   my ($r, $new, $state) = @_;
 
    $self->brik_help_run_undef_arg('return', $new) or return;
    $self->brik_help_run_invalid_arg('return', $new, 'ARRAY') or return;
@@ -52,6 +52,7 @@ sub return {
       %{$r->[0]},             # Keep results information from first page only
       count => scalar(@$new), # Overwrite count value
       results => $new,        # Overwrite results value
+      state => $state,
    } ];
 }
 
