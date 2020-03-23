@@ -302,6 +302,14 @@ sub export {
       'Content-Type' => 'application/json',
    });
 
+   # Abort on Ctrl+C
+   my $abort = 0;
+   $SIG{INT} = sub {
+      #print STDERR "Ctrl+C [$abort]\n";
+      $abort++;
+      return 1;
+   };
+
    # Will store incomplete line for later processing
    my $buf = '';
 
@@ -318,6 +326,10 @@ sub export {
       },
       on_body => sub {
          my ($data, $hdr) = @_;
+
+         if ($abort > 0) {
+            return $cv->send;
+         }
 
          $data = $buf.$data;  # Complete from previous remaining buf
 
