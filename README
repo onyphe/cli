@@ -29,7 +29,7 @@ INSTALLATION
   D/ Install client::onyphe Brik
 
   $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", "client::onyphe")'
+     'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe")'
 
   E/ Set your API key in the configuration file
 
@@ -38,7 +38,7 @@ INSTALLATION
   F/ Install custom functions (example: httpshot)
 
   $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", "client::onyphe::function::httpshot")'
+     'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe::function::httpshot")'
 
   Current list of custom functions:
   - addcount
@@ -59,11 +59,8 @@ INSTALLATION
 
 EXAMPLES
 
-  # Query your user profile to get your remaining credits
-  $ onyphe -simple user -fields credits
-
-  # Or full profile information
-  $ onyphe -simple user
+  # Query profile information (like API endpoints, available categories or remaining credits)
+  $ onyphe -user | jq .
 
   #
   # Query the simple API
@@ -71,13 +68,13 @@ EXAMPLES
   #
 
   # Search reverse DNS information
-  $ onyphe -simple reverse -value 8.8.8.8
+  $ onyphe -simple resolver_reverse -value 8.8.8.8
 
-  # Search data from free text and remove data field
-  $ onyphe -simple datascan -value 'WD My Cloud' -fields -data
+  # Search data from free text
+  $ onyphe -simple datascan -value 'WD My Cloud'
 
-  # Get a summary of information from an IP address and remove data field
-  $ onyphe -simple ip -value 8.8.8.8 -fields -data
+  # Get a summary of information from an IP address
+  $ onyphe -summary ip -value 8.8.8.8
 
   #
   # Query the search API (need subscription, see https://www.onyphe.io/pricing)
@@ -85,34 +82,32 @@ EXAMPLES
   #
 
   # Search for some NGINX products and encode data field as Base64
-  $ onyphe -search 'category:datascan product:NGINX' -encode data
+  $ onyphe -search 'category:datascan product:Nginx' | jq .
 
   # Just display useful information to you
-  $ onyphe -search 'category:datascan product:NGINX' \
-     -fields ip,port,tls,product,productversion,cpe
-
-  # Or remove unwanted fields
-  $ onyphe -search 'category:datascan product:NGINX' -fields -data
+  $ onyphe -search 'category:datascan product:Nginx -field:ip,port,tls,product,productversion,cpe'
 
   # Autoscroll through all results
   # !!! WARNING: may consume up to 1,000 credits
-  $ onyphe -search 'category:datascan product:NGINX' \
-     -fields ip,port,tls,product,productversion,cpe -autoscroll 1
+  $ onyphe -search 'category:datascan protocol:smb tag:smb::compression' \
+     -autoscroll 1
 
   # Autoscroll feature but limit the number of pages to scroll
-  $ onyphe -search 'category:datascan product:NGINX' \
-     -fields ip,port,tls,product,productversion,cpe -autoscroll 1 -maxpage 10
+  $ onyphe -search 'category:datascan protocol:smb tag:smb::compression' \
+     -autoscroll 1 -maxpage 10
 
-  # Save Mirai threatlist information from yesterday results as CSV output
-  $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' \
-     -fields subnet,tag -autoscroll 1 -verbose 0 -output csv > mirai.csv
+  # Save Mirai threatlist information from yesterday results
+  $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' > mirai.json
 
   # Execute a where clause to return results that match criterias from another query
   # Here, we want to find modbus devices which also have a Web interface.
   # !!! WARNING: may consume up to 11,000 credits.
-  $ onyphe -autoscroll 1 -fields ip,port,protocol,datamd5 \
-       -search 'category:datascan protocol:modbus -dayago:1 \
-     | -where category:datascan protocol:http ip:$ip'
+  $ onyphe -autoscroll 1 -search \
+      'category:datascan protocol:modbus -dayago:1 \
+     | search category:datascan protocol:http ip:$ip'
+
+  # Fetch all results
+  $ onyphe -export 'category:datascan protocol:mongo' > mongo.json
 
 COPYRIGHT AND LICENSE
 
