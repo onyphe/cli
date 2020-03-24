@@ -1,5 +1,5 @@
 use Test;
-BEGIN { plan(tests => 13) }
+BEGIN { plan(tests => 14) }
 
 ok(sub { eval("use Metabrik::Client::Onyphe::Function"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Dedup"); $@ ? 0 : 1 }, 1, $@);
@@ -14,3 +14,4 @@ ok(sub { eval("use Metabrik::Client::Onyphe::Function::Where"); $@ ? 0 : 1 }, 1,
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Whitelist"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Exec"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Httpshot"); $@ ? 0 : 1 }, 1, $@);
+ok(sub { eval("use Metabrik::Client::Onyphe::Function::Whois"); $@ ? 0 : 1 }, 1, $@);

@@ -26,10 +26,10 @@ INSTALLATION
   $ make test
   $ sudo make install
 
-  D/ Install api::onyphe Brik
+  D/ Install client::onyphe Brik
 
   $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", "api::onyphe")'
+     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", "client::onyphe")'
 
   E/ Set your API key in the configuration file
 
@@ -51,6 +51,7 @@ INSTALLATION
   - search
   - where
   - whitelist
+  - whois
 
   G/ Enjoy
 

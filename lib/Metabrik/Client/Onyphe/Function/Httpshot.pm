@@ -17,7 +17,6 @@ sub brik_properties {
          run => [ qw(page state) ],
       },
       require_modules => {
-         'Metabrik::String::Random' => [ ],
          'Metabrik::Shell::Command' => [ ],
       },
       require_binaries => {
@@ -38,7 +37,6 @@ sub run {
    $self->brik_help_run_undef_arg('run', $page) or return;
 
    my $sc = Metabrik::Shell::Command->new_from_brik_init($self) or return;
-   my $sr = Metabrik::String::Random->new_from_brik_init($self) or return;
 
    my $cb = sub {
       my ($this, $state, $new) = @_;
