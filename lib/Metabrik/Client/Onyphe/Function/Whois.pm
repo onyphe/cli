@@ -45,6 +45,9 @@ sub run {
       my $domain = $self->value_as_array($this, 'domain');
       for my $this_domain (@$domain) {
          my $target = $this_domain || $ip;
+         next if $state->{whois}{$this_domain};
+
+         $state->{whois}{$target}++;
 
          my $output = "/tmp/$target.whois";
 
@@ -53,7 +56,7 @@ sub run {
          $self->log->verbose("output[$output]");
          $self->log->verbose("cmd[$cmd]");
 
-         $self->log->info("launching whois for [$target]");
+         $self->log->info("launching whois for [$target], output [$output]");
 
          system("$cmd > $output 2> /dev/null &");
       }

@@ -66,7 +66,7 @@ sub run {
       $self->log->verbose("output[$output]");
       $self->log->verbose("cmd[$cmd]");
 
-      $self->log->info("taking screenshot for [$url]");
+      $self->log->info("taking screenshot for [$url], output [$output]");
 
       system("$cmd 2> /dev/null &");
 
