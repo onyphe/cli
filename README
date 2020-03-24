@@ -35,7 +35,24 @@ INSTALLATION
 
   $ echo '<APIKEY>' > ~/.onyphe_rc
 
-  F/ Enjoy
+  F/ Install custom functions (example: httpshot)
+
+  $ sudo perl -MMetabrik::Core::Context -e \
+     'Metabrik::Core::Context->new_brik_run("brik::tool", "install", "client::onyphe::function::httpshot")'
+
+  Current list of custom functions:
+  - addcount
+  - blacklist
+  - count
+  - dedup
+  - exec
+  - httpshot
+  - merge
+  - search
+  - where
+  - whitelist
+
+  G/ Enjoy
 
   $ onyphe
 
