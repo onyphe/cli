@@ -7,10 +7,11 @@ use warnings;
 
 use Getopt::Long;
 use Metabrik::Client::Onyphe;
+use Metabrik::Client::Onyphe::Log;
 
 # Default values
 my %lopts = (
-   verbose => 0,
+   verbose => 1,
    onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
    page => '1',
    autoscroll => '0',
@@ -42,8 +43,13 @@ load_onyphe_rc(%lopts);
 # Sanity checks
 sanity_checks(%lopts);
 
+# Load logging module
+my $log = Metabrik::Client::Onyphe::Log->new_brik_init;
+
 # Ready to rock
 my $cli = Metabrik::Client::Onyphe->new_brik_init;
+$cli->log($log);
+$cli->brik_init;
 $cli->log->level($lopts{verbose});
 $cli->apikey($lopts{apikey});
 $cli->apiurl($lopts{apiurl});
@@ -52,30 +58,27 @@ $cli->wait($lopts{wait});
 $cli->master($lopts{master} ? 1 : 0);
 
 # Launch query
-my $r;
 if ($lopts{search}) {   # Search API query mode with pipeline support
-   $r = $cli->search_pipeline($lopts{search}, $lopts{page}, $lopts{maxpage})
-      or $cli->log->fatal("search_pipeline: aborted");
+   $cli->pipeline($lopts{search}, 'search', $lopts{page}, $lopts{maxpage})
+      or $cli->log->fatal("search: aborted");
 }
-elsif ($lopts{export}) {   # Export API query mode
-   # Export does not return results as it streams them, so there is no
-   # output mode to use at the end.
-   $cli->export_pipeline($lopts{export})
-      or $cli->log->fatal("export_pipeline: aborted");
+elsif ($lopts{export}) {   # Export API query mode with pipeline support
+   $cli->pipeline($lopts{export}, 'export')
+      or $cli->log->fatal("export: aborted");
 }
 elsif ($lopts{summary}) {
    my $summary = $lopts{summary};
    my $value = $lopts{value};
-   $r = $cli->summary($summary, $value)
+   $cli->summary($summary, $value)
       or $cli->log->fatal("summary: aborted");
 }
 elsif ($lopts{user}) {
-   $r = $cli->user() or $cli->log->fatal("user: aborted");
+   $cli->user() or $cli->log->fatal("user: aborted");
 }
 else {  # Simple API query mode
    my $simple = $lopts{simple};
    my $value = $lopts{value};
-   $r = $cli->simple($simple, $value, $lopts{page}, $lopts{maxpage})
+   $cli->simple($simple, $value, $lopts{page}, $lopts{maxpage})
       or $cli->log->fatal("simple: aborted");
 }
 
@@ -103,7 +106,7 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
    -autoscroll <0|1>                       use autoscroll feature (default: 0)
                                            WARNING: may consume a lot of credit
    -maxpage <MAXPAGE>                      max page to fetch in autoscroll mode
-   -verbose <0|1|2|3>                      verbosity level (default: 0)
+   -verbose <0|1|2|3>                      verbosity level (default: 1)
    -wait <SECONDS>                         wait time in regards to rate limit (default: 1)
 
 EOF

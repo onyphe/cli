@@ -5,12 +5,12 @@ package Metabrik::Client::Onyphe::Function;
 use strict;
 use warnings;
 
-use base qw(Metabrik);
+use base qw(Metabrik::Client::Onyphe);
 
 sub brik_properties {
    return {
       revision => '$Revision: d629ccff5f0c $',
-      tags => [ qw(unstable) ],
+      tags => [ qw(client onyphe) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {

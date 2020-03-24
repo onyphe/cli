@@ -10,7 +10,7 @@ use base qw(Metabrik::Client::Onyphe::Function);
 sub brik_properties {
    return {
       revision => '$Revision: d629ccff5f0c $',
-      tags => [ qw(unstable) ],
+      tags => [ qw(client onyphe) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
@@ -34,9 +34,11 @@ sub run {
       while ($copy =~
          s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->value($this, $2)]}}) {
       }
+
       my $this_page = $self->search($copy, 1, 1) or return;
-      if ($this_page->{count} > 0) {  # Check only first page of results.
-         push @$new, @{$this_page->{results}}; # Keep this page if matches were found.
+      if (defined($this_page->{count}) && $this_page->{count} > 0) {
+         # Keep this page results if matches were found.
+         push @$new, @{$this_page->{results}}; 
       }
 
       return 1;

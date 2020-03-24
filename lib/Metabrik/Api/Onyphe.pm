@@ -12,7 +12,7 @@ use base qw(Metabrik::Client::Rest);
 sub brik_properties {
    return {
       revision => '$Revision: 31687a060e97 $',
-      tags => [ qw(unstable) ],
+      tags => [ qw(client onyphe) ],
       author => 'GomoR <GomoR[at]metabrik.org>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       attributes => {
@@ -105,6 +105,11 @@ sub api {
       $url .= '?page='.$currentpage;
    }
 
+   my $abort = 0;
+   $SIG{INT} = sub {
+      $abort++;
+   };
+
    my $page;
 
    RETRY:
@@ -112,28 +117,32 @@ sub api {
    my $res = $self->get($url);
    my $code = $self->code;
    if ($code == 429) {
-      $self->log->verbose("api: request limit reached, waiting before retry");
+      $self->log->warning("api: request limit reached, waiting before retry");
       if (defined($wait) && $wait > 0) {
          sleep($wait);
       }
       goto RETRY;
    }
    elsif ($code == 400) {
-      print STDERR "ERROR: api: bad request\n";
+      $self->log->error("api: bad request");
+      $page = $self->content;
+   }
+   elsif ($code == 200) {
       $page = $self->content;
    }
    else {
-      $page = $self->content;
+      $self->log->error("api: code [$code], waiting before retry");
+      if (defined($wait) && $wait > 0) {
+         sleep($wait);
+      }
+      goto RETRY;
+   }
+
+   if ($abort) {
+      return;
    }
 
    return $callback->($page);
-}
-
-sub geoloc {
-   my $self = shift;
-   my ($ip, $apikey, $page) = @_;
-
-   return $self->api('simple/geoloc', $ip, $apikey, $page);
 }
 
 sub summary_ip {
@@ -157,105 +166,112 @@ sub summary_hostname {
    return $self->api('summary/hostname', $ip, $apikey);
 }
 
-sub pastries {
+sub simple_geoloc {
+   my $self = shift;
+   my ($ip, $apikey, $page) = @_;
+
+   return $self->api('simple/geoloc', $ip, $apikey, $page);
+}
+
+sub simple_pastries {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/pastries', $ip, $apikey, $page);
 }
 
-sub inetnum {
+sub simple_inetnum {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/inetnum', $ip, $apikey, $page);
 }
 
-sub threatlist {
+sub simple_threatlist {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/threatlist', $ip, $apikey, $page);
 }
 
-sub topsite {
+sub simple_topsite {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/topsite', $ip, $apikey, $page);
 }
 
-sub synscan {
+sub simple_synscan {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/synscan', $ip, $apikey, $page);
 }
 
-sub vulnscan {
+sub simple_vulnscan {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/vulnscan', $ip, $apikey, $page);
 }
 
-sub datascan {
+sub simple_datascan {
    my $self = shift;
    my ($ip_or_string, $apikey, $page) = @_;
 
    return $self->api('simple/datascan', $ip_or_string, $apikey, $page);
 }
 
-sub onionscan {
+sub simple_onionscan {
    my $self = shift;
    my ($onion, $apikey, $page) = @_;
 
    return $self->api('simple/onionscan', $onion, $apikey, $page);
 }
 
-sub sniffer {
+sub simple_sniffer {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/sniffer', $ip, $apikey, $page);
 }
 
-sub ctl {
+sub simple_ctl {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/ctl', $ip, $apikey, $page);
 }
 
-sub reverse {
+sub simple_resolver_reverse {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/resolver/reverse', $ip, $apikey, $page);
 }
 
-sub forward {
+sub simple_resolver_forward {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/resolver/forward', $ip, $apikey, $page);
 }
 
-sub onionshot {
+sub simple_onionshot {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/onionshot', $ip, $apikey, $page);
 }
 
-sub datashot {
+sub simple_datashot {
    my $self = shift;
    my ($ip, $apikey, $page) = @_;
 
    return $self->api('simple/datashot', $ip, $apikey, $page);
 }
 
-sub datamd5 {
+sub simple_datascan_datamd5 {
    my $self = shift;
    my ($sum, $apikey, $page) = @_;
 
@@ -320,7 +336,9 @@ sub export {
    my $cv = AnyEvent->condvar;
 
    AnyEvent::HTTP::http_get($url,
-      timeout => 30,
+      # For each loop of processing, let callback work during 5 minutes
+      # before sending a timeout.
+      timeout => 300,
       headers => {
          'Authorization' => "apikey $apikey",
          'Content-Type' => "application/json",
@@ -329,6 +347,7 @@ sub export {
          my ($data, $hdr) = @_;
 
          if ($abort > 0) {
+            #print STDERR "abort\n";
             return $cv->send;
          }
 
@@ -341,7 +360,7 @@ sub export {
             # with \n ending chars. This last one will be put back
             # into $buf for next processing.
             # Thus, we only handle input stream on a line-by-line basis.
-            my ($this, $tail) = $data =~ m{^(.*?\n)([^\n]*)$}s;
+            my ($this, $tail) = $data =~ m/^(.*\n)(.*)$/s;
             # One line is not complete, add to buf and go to next:
             if (!defined($this)) {
                $buf = $data;
@@ -354,7 +373,12 @@ sub export {
             # Put in page format
             my $page;
             for (@lines) {
-               push @{$page->{results}}, $sj->decode($_);
+               my $decode = $sj->decode($_);
+               if (!defined($decode)) {
+                  $self->log->error("unable to decode [$_]");
+                  next;
+               }
+               push @{$page->{results}}, $decode;
             }
 
             my $r = $callback->($page, $state);
@@ -375,8 +399,10 @@ sub export {
          my (undef, $hdr) = @_;
  
          my $status = $hdr->{Status};
+         my $reason = $hdr->{Reason};
          if ($status != 200 && $status != 598) {
-            #print STDERR "ERROR: completion: status [$status]\n";
+            $self->log->error("completion: status [$status], reason ".
+               " [$reason]");
             #print Data::Dumper::Dumper($hdr)."\n";
          }
 
@@ -386,7 +412,15 @@ sub export {
             # Put in page format
             my $page;
             for (@lines) {
-               push @{$page->{results}}, $sj->decode($_);
+               my $decode = $sj->decode($_);
+               if (!defined($decode)) {
+                  # On abort, line may be incomplete, don't print error.
+                  if (! $abort) {
+                     $self->log->error("unable to decode remaining [$_]");
+                  }
+                  next;
+               }
+               push @{$page->{results}}, $decode;
             }
             $callback->($page, $state);
          }

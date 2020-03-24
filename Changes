@@ -1,6 +1,14 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
-2.00
+2.01 Tue 24 Mar 11:25:41 CET 2020
+   - new: added logging Brik so we send logging to STDERR and data to STDOUT
+   - bugfix: API endpoints for Simple APIs was failing
+   - bugfix: when HTTP GET to APIv2 gives error, retry after waiting
+   - bugfix: export Command to have a 5 minutes timeout to give time for
+     pipeline to process data
+   - update: export & search pipeline merged to they behave the exact same way
+
+2.00 Mon 23 Mar 15:30:59 CET 2020
    - UPDATE: rework internal format, now called a "page"
    - update: functions are no more forced to have a parameter
    - update: print error messages on STDERR
