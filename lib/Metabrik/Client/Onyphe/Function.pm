@@ -13,11 +13,20 @@ sub brik_properties {
       tags => [ qw(client onyphe) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
+      attributes => {
+         last => [ qw(0|1) ],
+      },
+      attributes_default => {
+         last => 0,
+      },
       commands => {
          value => [ qw(doc field) ],
          value_as_array => [ qw(doc field) ],
          iter => [ qw(page callback) ],
          return => [ qw(page new state|OPTIONAL) ],
+      },
+      require_modules => {
+         'Text::ParseWords' => [ ],
       },
    };
 }
@@ -79,6 +88,15 @@ sub return {
       results => $new,        # Overwrite results value
       state => $state,
    };
+}
+
+sub parse {
+   my $self = shift;
+   my ($arg) = @_;
+
+   my @a = Text::ParseWords::quotewords('\s+', 0, $arg);
+
+   return \@a;
 }
 
 1;

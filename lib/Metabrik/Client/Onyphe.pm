@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '2.01';
+our $VERSION = '2.02';
 
 use base qw(Metabrik);
 
@@ -231,6 +231,11 @@ sub pipeline {
 
    $self->log->verbose("pipeline: query[$query]");
 
+   my $last_page;
+   my $last_function;
+   my $last_argument;
+   my $last_state;
+
    my $callback = sub {
       my ($page, $state) = @_;
 
@@ -266,10 +271,19 @@ sub pipeline {
 
          my $argument = $function[1];
 
+         if ($function->last) {
+            $last_function = $function;
+            $last_argument = $argument;
+            $last_state = $state;
+            next;
+         }
+
          $self->log->verbose("pipeline: function[$function]");
 
          $page = $function->run($page, $state, $argument);
          last if (!defined($page));
+
+         $last_page = $page;
       }
 
       if (defined($page)) {
@@ -286,6 +300,10 @@ sub pipeline {
    };
 
    $self->$api($query, $currentpage, $maxpage, $callback);
+
+   if (defined($last_function) && defined($last_page)) {
+      $last_function->run($last_page, $last_state, $last_argument);
+   }
 
    return 1;
 }

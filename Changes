@@ -1,5 +1,17 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+2.02 Wed 25 Mar 10:43:27 CET 2020
+   - update: pipeline can accept last-type functions, executing only on last
+     known state. Example: piechart.
+   - update: client::onyphe::function now have a last Attribute
+   - update: whitelist and blacklist optimized to load CSV file only 1 time
+   - new: piechart function
+   - new: uniq function
+   - new: top function
+   - new: whois function
+   - new: httpshot function
+   - new: exec function
+
 2.01 Tue 24 Mar 11:25:41 CET 2020
    - new: added logging Brik so we send logging to STDERR and data to STDOUT
    - bugfix: API endpoints for Simple APIs was failing
