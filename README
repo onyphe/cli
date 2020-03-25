@@ -48,7 +48,10 @@ INSTALLATION
   - exec
   - httpshot
   - merge
+  - piechart
   - search
+  - top
+  - uniq
   - where
   - whitelist
   - whois
