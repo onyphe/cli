@@ -10,8 +10,11 @@ lib/Metabrik/Client/Onyphe/Function/Exec.pm
 lib/Metabrik/Client/Onyphe/Function/Httpshot.pm
 lib/Metabrik/Client/Onyphe/Function/Merge.pm
 lib/Metabrik/Client/Onyphe/Function/Output.pm
+lib/Metabrik/Client/Onyphe/Function/Piechart.pm
 lib/Metabrik/Client/Onyphe/Function.pm
 lib/Metabrik/Client/Onyphe/Function/Search.pm
+lib/Metabrik/Client/Onyphe/Function/Top.pm
+lib/Metabrik/Client/Onyphe/Function/Uniq.pm
 lib/Metabrik/Client/Onyphe/Function/Where.pm
 lib/Metabrik/Client/Onyphe/Function/Whitelist.pm
 lib/Metabrik/Client/Onyphe/Function/Whois.pm
