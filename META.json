@@ -33,7 +33,7 @@
       },
       "Metabrik::Client::Onyphe" : {
          "file" : "lib/Metabrik/Client/Onyphe.pm",
-         "version" : "2.01"
+         "version" : "2.03"
       },
       "Metabrik::Client::Onyphe::Function" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function.pm"
@@ -62,8 +62,17 @@
       "Metabrik::Client::Onyphe::Function::Output" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Output.pm"
       },
+      "Metabrik::Client::Onyphe::Function::Piechart" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Piechart.pm"
+      },
       "Metabrik::Client::Onyphe::Function::Search" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Search.pm"
+      },
+      "Metabrik::Client::Onyphe::Function::Top" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Top.pm"
+      },
+      "Metabrik::Client::Onyphe::Function::Uniq" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Uniq.pm"
       },
       "Metabrik::Client::Onyphe::Function::Where" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Where.pm"
@@ -84,6 +93,6 @@
          "http://opensource.org/licenses/BSD-3-Clause"
       ]
    },
-   "version" : "2.01",
+   "version" : "2.03",
    "x_serialization_backend" : "JSON::PP version 2.27400_02"
 }

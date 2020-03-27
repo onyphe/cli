@@ -124,8 +124,8 @@ sub api {
       goto RETRY;
    }
    elsif ($code == 400) {
-      $self->log->error("api: bad request");
       $page = $self->content;
+      $self->log->error("api: bad request: ".$page->{text});
    }
    elsif ($code == 200) {
       $page = $self->content;

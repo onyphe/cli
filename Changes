@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+2.03 Fri 27 Mar 15:01:34 CET 2020
+   - new: lookup function
+
 2.02 Wed 25 Mar 10:43:27 CET 2020
    - update: pipeline can accept last-type functions, executing only on last
      known state. Example: piechart.
