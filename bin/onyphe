@@ -24,6 +24,7 @@ GetOptions(
    "user" => \$lopts{user},
    "simple=s" => \$lopts{simple},
    "summary=s" => \$lopts{summary},
+   "alert=s" => \$lopts{alert},
    "value=s" => \$lopts{value},
    "search=s" => \$lopts{search},
    "export=s" => \$lopts{export},
@@ -75,6 +76,21 @@ elsif ($lopts{summary}) {
 elsif ($lopts{user}) {
    $cli->user() or $cli->log->fatal("user: aborted");
 }
+elsif ($lopts{alert}) {
+   my $alert = $lopts{alert};
+   if( defined($lopts{value}) )
+   {
+    my $value;
+    $value = $lopts{value};
+    $cli->alert($alert, $value)
+      or $cli->log->fatal("alert: aborted");
+   }
+   else
+   {
+    $cli->alert($alert,) # no value
+      or $cli->log->fatal("alert: aborted");
+   }
+}
 else {  # Simple API query mode
    my $simple = $lopts{simple};
    my $value = $lopts{value};
@@ -95,12 +111,14 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
        onyphe [options] -user
        onyphe [options] -simple API -value VALUE
        onyphe [options] -summary API -value VALUE
+       onyphe [options] -alert API -value VALUE
 
    -user                                   get information on your license
    -apikey <APIKEY>                        your personal ONYPHE API key
    -search <SEARCH>                        use Search API for query
    -summary <API>                          use Summary API for query (need -value)
    -simple <API>                           use Simple API for query (need -value)
+   -alert <list|add|del>                   use alert API
    -value <VALUE>                          value to use when using Simple or Summary API
    -page <PAGE>                            fetch results for page (default: 1)
    -autoscroll <0|1>                       use autoscroll feature (default: 0)
@@ -145,8 +163,8 @@ sub sanity_checks {
 
    if (! defined($lopts{search}) && ! defined($lopts{simple})
    &&  ! defined($lopts{summary}) && ! defined($lopts{user})
-   &&  ! defined($lopts{export})) {
-      print "ERROR: need -search, -simple, -summary, -export or -user argument\n";
+   &&  ! defined($lopts{export}) && ! defined($lopts{alert})) {
+      print "ERROR: need -search, -simple, -summary, -export, -alert or -user argument\n";
       usage();
    }
 
@@ -160,8 +178,8 @@ sub sanity_checks {
       usage();
    }
 
-   if (! ($lopts{simple} || $lopts{summary}) && defined($lopts{value})) {
-      print "ERROR: -simple argument missing but -value argument used\n";
+   if (! ($lopts{simple} || $lopts{summary} || $lopts{alert}) && defined($lopts{value})) {
+      print "ERROR: -simple or -summary or -alert argument missing but -value argument used\n";
       usage();
    }
 
