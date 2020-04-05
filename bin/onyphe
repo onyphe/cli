@@ -32,6 +32,7 @@ GetOptions(
    "maxpage=i" => \$lopts{maxpage},
    "autoscroll=i" => \$lopts{autoscroll},
    "apiurl=s" => \$lopts{apiurl},
+   "alert=s" => \$lopts{alert},
 ) or usage();
 
 # Load API key from onyphe rc file
@@ -52,6 +53,21 @@ my $r;
 if ($lopts{search}) {   # Search API query mode with pipeline support
    $r = $cli->search_pipeline($lopts{search}, $lopts{page}, $lopts{maxpage})
       or $cli->log->fatal("search_pipeline: aborted");
+}
+elsif ($lopts{alert}) {
+   my $alert = $lopts{alert};
+   if( defined($lopts{value}) )
+   {
+    my $value;
+    $value = $lopts{value};
+    $r = $cli->alert($alert, $value, $lopts{page}, $lopts{maxpage})
+      or $cli->log->fatal("alert: aborted");
+   }
+   else
+   {
+    $r = $cli->alert($alert,, $lopts{page}, $lopts{maxpage})
+      or $cli->log->fatal("alert: aborted");
+   }
 }
 else {  # Simple API query mode
    my $simple = $lopts{simple};
@@ -94,6 +110,7 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
                                            or remove (-) from output
    -encode <FIELD1,FIELD2,...FIELDn>       comma separated list of fields to Base64 encode
    -verbose <0|1|2|3>                      verbosity level (default: 1)
+   -alert <list|add|del>                   use alert API
 
 EOF
 ;
@@ -129,8 +146,8 @@ sub load_onyphe_rc {
 sub sanity_checks {
    my ($lopts) = @_;
 
-   if (! defined($lopts{search}) && ! defined($lopts{simple})) {
-      print "ERROR: -search or -simple argument missing\n";
+   if (! defined($lopts{search}) && ! defined($lopts{simple}) && ! defined($lopts{alert})) {
+      print "ERROR: -search or -simple or -alert argument missing\n";
       usage();
    }
 
@@ -144,7 +161,7 @@ sub sanity_checks {
       usage();
    }
 
-   if (! $lopts{simple} && defined($lopts{value})) {
+   if ((! $lopts{simple} && ! $lopts{alert}) && defined($lopts{value})) {
       print "ERROR: -simple argument missing but -value argument used\n";
       usage();
    }
