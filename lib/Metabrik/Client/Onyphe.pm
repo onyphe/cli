@@ -34,6 +34,7 @@ sub brik_properties {
          simple => [ qw(api value page|OPTIONAL maxpage|OPTIONAL) ],
          summary => [ qw(api value) ],
          search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
+         alert => [ qw(query) ],
          export => [ qw(query) ],
          pipeline => [ qw(pipeline api currentpage|OPTIONAL maxpage|OPTIONAL) ],
       },
@@ -56,6 +57,34 @@ sub brik_init {
    $self->_sj($sj);
 
    return $self->SUPER::brik_init;
+}
+
+sub alert {
+   my $self = shift;
+   my ($api, $value, $currentpage, $maxpage) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('alert', $api) or return;
+   $self->brik_help_run_undef_arg('alert', $value) or return unless $api; # alert list has no value
+
+   my $apiurl = $self->apiurl;
+
+   my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
+
+   $api = "alert_$api";
+   if (! $ao->can($api)) {
+      return $self->log->error("alert: api [$api] unknown");
+   }
+
+   $self->log->verbose("alert: requesting");
+
+   $ao->$api($value, $apikey) or return;
+
+   $self->log->info("alert: fetched");
+
+   return 1;
 }
 
 sub user {
@@ -342,6 +371,9 @@ Metabrik::Client::Onyphe - official client for ONYPHE API access
    $cli->simple_datascan('apache');
    $cli->simple_resolver_reverse('8.8.8.8');
 
+   # Example alert API
+   my $results = $cli->alert('list');
+
 =head1 DESCRIPTION
 
 Official client for ONYPHE API access.
@@ -375,6 +407,10 @@ Use Simple API for queries (geoloc, inetnum, pastries, datascan, ...).
 =item B<summary> (value)
 
 Use Summary API for queries (ip, domain, hostname).
+
+=item B<alert>
+
+Use alert API for alerting.
 
 =item B<search> (query)
 
