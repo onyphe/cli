@@ -112,6 +112,15 @@ EXAMPLES
   # Fetch all results
   $ onyphe -export 'category:datascan protocol:mongo' > mongo.json
 
+  # List alert
+  $ onyphe -alert list
+
+  # Add data on alert
+  $ onyphe -alert add -value '{"name":"My alert","query":"category:datascan domain:example.com -exists:cve","email":"destination@example.com"}'
+
+  # Del data on alert
+  $ onyphe -alert del -value 0
+
 COPYRIGHT AND LICENSE
 
    Copyright (c) 2018-2020, ONYPHE
