@@ -97,6 +97,20 @@ EXAMPLES
        -search 'category:datascan protocol:modbus -dayago:1 \
      | -where category:datascan protocol:http ip:$ip'
 
+  #
+  # Query the alert API v2 (need subscription, see https://www.onyphe.io/pricing)
+  # See https://www.onyphe.io/documentation/api for more APIs
+  #
+
+  # list alert
+  $ onyphe -alert list
+
+  # add data on alert
+  $ onyphe -alert add -value '{"name":"My alert","query":"category:datascan domain:example.com -exists:cve","email":"destination@example.com"}'
+
+  # del data on alert
+  $ onyphe -alert del -value 0
+
 COPYRIGHT AND LICENSE
 
    Copyright (c) 2018-2019, ONYPHE
