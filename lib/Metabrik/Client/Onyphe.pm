@@ -37,6 +37,7 @@ sub brik_properties {
          output_csv => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
          output_psv => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
          output_json => [ qw(results fields|OPTIONAL encode|OPTIONAL) ],
+         alert => [ qw(api value page|OPTIONAL maxpage|OPTIONAL) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
@@ -59,6 +60,61 @@ sub brik_init {
    $self->_sb($sb);
 
    return $self->SUPER::brik_init;
+}
+
+sub alert {
+   my $self = shift;
+   my ($api, $value, $page, $maxpage) = @_;
+
+   $page ||= 1;
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('alert', $api) or return;
+
+   my $apiurl = $self->apiurl;
+
+   my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
+
+   if (! $ao->can($api)) {
+      return $self->log->error("alert: api [$api] unknown");
+   }
+
+   # Special case for user API
+   if ($api eq 'user') {
+      return $ao->user($apikey);
+   }
+
+   $self->brik_help_run_undef_arg('alert', $value) or return;
+
+   $self->log->verbose("alert: requesting page [$page]");
+
+   my @r = ();
+   my $results = $ao->$api($value, $apikey, $page) or return;
+   push @r, @$results;
+
+   $maxpage ||= $results->[0]{max_page} || 1;
+   $self->log->verbose("alert: maxpage is [$maxpage]");
+
+   $self->log->info("alert: page [$page/$maxpage] fetched");
+
+   if ($self->autoscroll && ++$page <= $maxpage) {
+      my $last = 0;
+      $SIG{INT} = sub {
+         $last = 1;
+         return \@r;
+      };
+      for ($page..$maxpage) {
+         $self->log->verbose("alert: scrolling page [$_]");
+         my $results = $ao->$api($value, $apikey, $_) or return;
+         push @r, @$results;
+         my $perc = sprintf("%.02f%%", $_ / $maxpage * 100);
+         $self->log->info("alert: page [$_/$maxpage] fetched ($perc)...");
+         last if $last;
+      }
+   }
+
+   return \@r;
 }
 
 sub simple {
@@ -718,6 +774,9 @@ Metabrik::Client::Onyphe - official client for ONYPHE API access
    my $results = $cli->datascan('apache');
    my $results = $cli->reverse('8.8.8.8');
 
+   # Example alert API
+   my $results = $cli->alert('list');
+
 =head1 DESCRIPTION
 
 Official client for ONYPHE API access.
@@ -743,6 +802,10 @@ Official client for ONYPHE API access.
 =item B<simple>
 
 Use simple API for queries.
+
+=item B<alert>
+
+Use alert API for alerting.
 
 =item B<search>
 
