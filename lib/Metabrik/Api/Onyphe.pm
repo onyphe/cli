@@ -49,7 +49,6 @@ sub brik_properties {
         datamd5 => [ qw(sum apikey|OPTIONAL) ],
         domain => [ qw(string apikey|OPTIONAL page|OPTIONAL) ],
         hostname => [ qw(string apikey|OPTIONAL page|OPTIONAL) ],
-        list => [ qw(apikey|OPTIONAL page|OPTIONAL) ],
         search => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         user => [ qw(apikey|OPTIONAL) ],
         export => [ qw(query callback apikey|OPTIONAL) ],
@@ -84,7 +83,7 @@ sub api {
 
    $self->log->verbose("api: using url[$apiurl]");
 
-   $arg = URI::Escape::uri_escape_utf8($arg);
+   $arg = URI::Escape::uri_escape_utf8($arg) unless $api eq "alert/add";
 
    # Default callback
    $callback ||= sub {
@@ -100,9 +99,11 @@ sub api {
       return $page;
    };
 
-   my $url = $apiurl.'/'.$api.'/'.$arg;
+   my $url;
+   $url = $apiurl.'/'.$api.'/'.$arg unless $api eq "alert/list" or $api eq "alert/add";
+   $url = $apiurl.'/'.$api if $api eq "alert/list" or $api eq "alert/add";
    if (defined($currentpage)) {
-      $url .= '?page='.$currentpage;
+      $url .= '?page='.$currentpage unless $api eq "alert/add";
    }
 
    my $abort = 0;
@@ -114,7 +115,10 @@ sub api {
 
    RETRY:
 
-   my $res = $self->get($url);
+   my $res;
+   $res = $self->get($url) unless $api eq "alert/add" or $api eq "alert/del";
+   $res = $self->post($arg, $url) if $api eq "alert/add";
+   $res = $self->post("", $url) if $api eq "alert/del";
    my $code = $self->code;
    if ($code == 429) {
       $self->log->warning("api: request limit reached, waiting before retry");
@@ -276,6 +280,27 @@ sub simple_datascan_datamd5 {
    my ($sum, $apikey, $page) = @_;
 
    return $self->api('simple/datascan/datamd5', $sum, $apikey, $page);
+}
+
+sub alert_list {
+   my $self = shift;
+   my ($query, $apikey) = @_;
+
+   return $self->api('alert/list', "", $apikey); # no query on list
+}
+
+sub alert_add {
+   my $self = shift;
+   my ($query, $apikey) = @_;
+
+   return $self->api('alert/add', $query, $apikey);
+}
+
+sub alert_del {
+   my $self = shift;
+   my ($query, $apikey) = @_;
+
+   return $self->api('alert/del', $query, $apikey);
 }
 
 sub search {
