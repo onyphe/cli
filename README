@@ -47,6 +47,7 @@ INSTALLATION
   - dedup
   - exec
   - httpshot
+  - lookup
   - merge
   - piechart
   - search
@@ -111,6 +112,16 @@ EXAMPLES
 
   # Fetch all results
   $ onyphe -export 'category:datascan protocol:mongo' > mongo.json
+
+  # Lookup a list of IP against an input csv to know if they are threats:
+  $ cat input.csv
+  ip
+  1.1.1.1
+  2.2.2.2
+  $ onyphe -export 'category:threatlist -exists:subnet | whitelist input.csv cidr=ip'
+
+  # Display top countries for an organization:
+  $ onyphe -export 'category:geoloc organization:"Global Layer B.V." | top country | piechart'
 
 COPYRIGHT AND LICENSE
 

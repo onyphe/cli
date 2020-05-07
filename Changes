@@ -1,5 +1,9 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+2.04 Thu  7 May 18:00:38 CEST 2020
+   - update: whitelist and blacklist functions support for CIDR match
+             against subnet field (threatlist lookup use-case)
+
 2.03 Fri 27 Mar 15:01:34 CET 2020
    - new: lookup function
 

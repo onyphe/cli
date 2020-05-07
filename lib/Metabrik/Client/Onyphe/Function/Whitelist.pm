@@ -23,17 +23,30 @@ sub brik_properties {
       },
       require_modules => {
          'Metabrik::File::Csv' => [ ],
+         'Metabrik::Network::Address' => [ ],
       },
    };
 }
 
 sub run {
    my $self = shift;
-   my ($page, $state, $lookup) = @_;
+   my ($page, $state, $args) = @_;
 
    $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $lookup) or return;
+   $self->brik_help_run_undef_arg('run', $args) or return;
+
+   my $arg = $self->parse($args);
+   my $lookup = $arg->[0];
    $self->brik_help_run_file_not_found('run', $lookup) or return;
+
+   my $cidr = $arg->[1];
+   my ($cidr_mode, $cidr_field) = $cidr =~ m{^(cidr)=(\w+)$};
+   $cidr_field ||= 'ip';
+
+   my $na;
+   if ($cidr_mode) {
+      $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
+   }
 
    my $csv;
    my $csv_header;
@@ -59,18 +72,33 @@ sub run {
       my $skip = 0;
       # $field is the field to match against (example: domain):
       for my $field (@$csv_header) {
+         # In CIDR match mode, the given field is to be matched against subnet:
+         my $match_field = $field;
+         if ($cidr_mode && $field eq $cidr_field) {
+            $match_field = 'subnet';
+         }
+
          # Fetch the value from current result $this:
-         my $value = $self->value_as_array($this, $field) or next;
+         my $value = $self->value_as_array($this, $match_field) or next;
 
          # Compare against all fields given in the CSV:
          for my $a (@$value) {
             my $match = 0;
             for my $h (@$csv) {
-               if (exists($h->{$field}) && $h->{$field} eq $a) {
-                  #print "[DEBUG] skip field [$field] value [$a]\n";
-                  $skip++;
-                  $match++;
-                  last;
+               #print "[DEBUG] match_field [$match_field] value [".$h->{$field}."] a[$a]\n";
+               if (exists($h->{$field})) {
+                  if (!$cidr_mode && $h->{$field} eq $a) {
+                     #print "[DEBUG] skip field [$field] value [$a]\n";
+                     $skip++;
+                     $match++;
+                     last;
+                  }
+                  elsif ($cidr_mode && $na->match($h->{$field}, $a)) {
+                     #print "[DEBUG] skip field [$field] value [$a]\n";
+                     $skip++;
+                     $match++;
+                     last;
+                  }
                }
             }
             last if $match;
