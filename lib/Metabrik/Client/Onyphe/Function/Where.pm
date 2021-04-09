@@ -27,17 +27,31 @@ sub run {
    $self->brik_help_run_undef_arg('run', $where) or return;
 
    my $cb = sub {
-      my ($this, $state, $new, $where) = @_;
+      my ($this, $state, $new, $search) = @_;
+
+      my $copy = $search;
+      my (@holders) = $copy =~ m{[\w\.]+\s*:\s*\$([\w\.]+)}g;
 
       # Update where clause with placeholder values
-      my $copy = $where;
-      while ($copy =~
-         s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->value($this, $2)]}}) {
-         #$self->log->debug("1[$1] 2[$2] value[".$self->value($this, $2)."]");
+      my %searches = ();
+      for my $holder (@holders) {
+         my $values = $self->value_as_array($this, $holder);
+         for my $value (@$values) {
+            while ($copy =~
+               s{(\S+)\s*:\s*\$$holder}{$1:$value}) {
+            }
+            $searches{$copy}++;  # Make them unique
+         }
       }
-      my $this_page = $self->search($copy, 1, 1) or return;
-      if ($this_page->{count} > 0) {
-         push @$new, $this;           # Keep this page if matches were found.
+
+      my @searches = keys %searches;
+      for my $search (@searches) {
+         $self->log->verbose("where[$search]");
+         my $this_page = $self->search($search, 1, 1) or return;
+         if (defined($this_page->{count}) && $this_page->{count} > 0) {
+            # Keep this result if matches were found:
+            push @$new, $this;
+         }
       }
 
       return 1;

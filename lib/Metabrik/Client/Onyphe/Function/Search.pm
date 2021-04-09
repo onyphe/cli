@@ -29,16 +29,29 @@ sub run {
    my $cb = sub {
       my ($this, $state, $new, $search) = @_;
 
-      # Update search clause with placeholder values
       my $copy = $search;
-      while ($copy =~
-         s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->value($this, $2)]}}) {
+      my (@holders) = $copy =~ m{[\w\.]+\s*:\s*\$([\w\.]+)}g;
+
+      # Update where clause with placeholder values
+      my %searches = ();
+      for my $holder (@holders) {
+         my $values = $self->value_as_array($this, $holder);
+         for my $value (@$values) {
+            while ($copy =~
+               s{(\S+)\s*:\s*\$$holder}{$1:$value}) {
+            }
+            $searches{$copy}++;  # Make them unique
+         }
       }
 
-      my $this_page = $self->search($copy, 1, 1) or return;
-      if (defined($this_page->{count}) && $this_page->{count} > 0) {
-         # Keep this page results if matches were found.
-         push @$new, @{$this_page->{results}}; 
+      my @searches = keys %searches;
+      for my $search (@searches) {
+         $self->log->verbose("search[$search]");
+         my $this_page = $self->search($search, 1, 1) or return;
+         if (defined($this_page->{count}) && $this_page->{count} > 0) {
+            # Keep this page results if matches were found.
+            push @$new, @{$this_page->{results}};
+         }
       }
 
       return 1;
