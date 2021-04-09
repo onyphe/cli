@@ -216,6 +216,7 @@ sub pipeline {
 
    my $sj = $self->_sj;
    my $apikey = $self->apikey;
+   my $apiurl = $self->apiurl;
 
    my @cmd = split(/\s*\|\s*-?/, $pipeline);
    if (@cmd == 0) {
@@ -267,6 +268,7 @@ sub pipeline {
             return;
          }
          # So function can call main client::onyphe client
+         $function->apiurl($apiurl);
          $function->apikey($apikey);
 
          my $argument = $function[1];
