@@ -35,6 +35,7 @@ sub brik_properties {
          summary => [ qw(api value) ],
          search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
          export => [ qw(query) ],
+         bulk => [ qw(api input) ],
          pipeline => [ qw(pipeline api currentpage|OPTIONAL maxpage|OPTIONAL) ],
       },
       require_modules => {
@@ -196,12 +197,35 @@ sub export {
    $ao->apiurl($apiurl);
    $ao->master($master);
 
-   if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
+   if ($query !~ m{^\s*category\s*:\s*(\S+)\s+(.+)\s*$}i) {
       return $self->log->error("export: please start your search with ".
          "'category:CATEGORY'");
    }
 
    $ao->export($query, $callback, $apikey) or return;
+
+   return 1;
+}
+
+sub bulk {
+   my $self = shift;
+   my ($query, $currentpage, $maxpage, $callback) = @_;
+
+   my $apikey = $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('bulk', $query) or return;
+
+   my $apiurl = $self->apiurl;
+
+   my $ao = $self->_ao;
+   $ao->apiurl($apiurl);
+
+   if ($query !~ m{^\s*bulk\s*:\s*(\S+)\s+(\S+)(.+)\s*$}i) {
+      return $self->log->error("bulk: please start your search with ".
+         "'bulk:BULK_API INPUT_FILE'");
+   }
+
+   $ao->bulk($query, $callback, $apikey) or return;
 
    return 1;
 }
@@ -223,11 +247,11 @@ sub pipeline {
       return $self->log->error("pipeline: no search command found");
    }
 
-   # First one is hopefully a search query
+   # First one is hopefully a search query or a given API (like for Bulk APIs):
    my $query = shift @cmd;
-   if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
+   if ($query !~ m{^\s*(?:category|bulk)\s*:\s*(\S+)\s+(.+)\s*$}i) {
       return $self->log->error("pipeline: please start your search ".
-         "with 'category:CATEGORY'");
+         "with 'category:CATEGORY' or 'bulk:BULK_API INPUT_FILE'");
    }
 
    $self->log->verbose("pipeline: query[$query]");
@@ -370,15 +394,15 @@ Official client for ONYPHE API access.
 
 Query user license information (enpoints and categories allowed along with remaining credits).
 
-=item B<simple> (value)
+=item B<simple> (api, value)
 
 Use Simple API for queries (geoloc, inetnum, pastries, datascan, ...).
 
-=item B<summary> (value)
+=item B<summary> (api, value)
 
 Use Summary API for queries (ip, domain, hostname).
 
-=item B<search> (query)
+=item B<search> (query, page|OPTIONAL, maxpage|OPTIONAL)
 
 Use Search API for queries.
 
@@ -398,7 +422,7 @@ L<Metabrik>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2020, ONYPHE
+Copyright (c) 2018-2021, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.
