@@ -61,6 +61,8 @@ sub value_as_array {
    return $value;
 }
 
+# Will iterate over all object results. Output of functions will create an new ARRAY
+# of objects, maybe modified by the pipeline.
 sub iter {
    my $self = shift;
    my ($page, $cb, $state, @args) = @_;
