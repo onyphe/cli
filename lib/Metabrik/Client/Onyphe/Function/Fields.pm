@@ -36,13 +36,12 @@ sub run {
    my $cb = sub {
       my ($this, $state, $new, $keep) = @_;
 
-      my %new = ();
       for my $k (keys %$this) {
          next if $keep->{$k};
          delete $this->{$k};
       }
 
-      @$new = [ $this ];
+      push @$new, $this;
 
       return 1;
    };
