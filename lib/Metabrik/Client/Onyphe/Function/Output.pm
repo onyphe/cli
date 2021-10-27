@@ -37,7 +37,7 @@ sub run {
 
    $format = $format->[0];  # Always single option
 
-   if ($format ne 'csv') {
+   if ($format ne 'csv' && $format ne 'txt') {
       return $self->log->error("function_output: invalid output format [$format]");
    }
 
@@ -88,12 +88,17 @@ sub run {
       #print Data::Dumper::Dumper(\@this_line)."\n";
 
       for (@this_line) {
-         if (defined($header) && !$state->{output}{header_print}) {
+         if ($format eq 'csv' && defined($header) && !$state->{output}{header_print}) {
             my $hdr = join('","', @$header);
             print "\"$hdr\"\n";
             $state->{output}{header_print}++;
          }
-         print "\"$_\"\n";
+         if ($format eq 'csv') {
+            print "\"$_\"\n";
+         }
+         elsif ($format eq 'txt') {
+            print "$_\n";
+         }
       }
 
       return 1;
