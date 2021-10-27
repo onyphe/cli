@@ -27,6 +27,7 @@ GetOptions(
    "value=s" => \$lopts{value},
    "search=s" => \$lopts{search},
    "export=s" => \$lopts{export},
+   "bulk=s" => \$lopts{bulk},
    "verbose=i" => \$lopts{verbose},
    "apikey=s" => \$lopts{apikey},
    "page=i" => \$lopts{page},
@@ -66,6 +67,10 @@ elsif ($lopts{export}) {   # Export API query mode with pipeline support
    $cli->pipeline($lopts{export}, 'export')
       or $cli->log->fatal("export: aborted");
 }
+elsif ($lopts{bulk}) {
+   $cli->pipeline($lopts{bulk}, 'bulk')
+      or $cli->log->fatal("bulk: aborted");
+}
 elsif ($lopts{summary}) {
    my $summary = $lopts{summary};
    my $value = $lopts{value};
@@ -99,6 +104,8 @@ Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
    -user                                   get information on your license
    -apikey <APIKEY>                        your personal ONYPHE API key
    -search <SEARCH>                        use Search API for query
+   -export <SEARCH>                        use Export API for query
+   -bulk <SEARCH>                          use Bulk API for query
    -summary <API>                          use Summary API for query (need -value)
    -simple <API>                           use Simple API for query (need -value)
    -value <VALUE>                          value to use when using Simple or Summary API
@@ -145,8 +152,8 @@ sub sanity_checks {
 
    if (! defined($lopts{search}) && ! defined($lopts{simple})
    &&  ! defined($lopts{summary}) && ! defined($lopts{user})
-   &&  ! defined($lopts{export})) {
-      print "ERROR: need -search, -simple, -summary, -export or -user argument\n";
+   &&  ! defined($lopts{export}) && ! defined($lopts{bulk})) {
+      print "ERROR: need -search, -simple, -summary, -export, -bulk or -user argument\n";
       usage();
    }
 
@@ -160,7 +167,7 @@ sub sanity_checks {
       usage();
    }
 
-   if (! ($lopts{simple} || $lopts{summary}) && defined($lopts{value})) {
+   if (! ($lopts{simple} || $lopts{summary} || $lopts{bulk}) && defined($lopts{value})) {
       print "ERROR: -simple argument missing but -value argument used\n";
       usage();
    }
@@ -189,7 +196,7 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2020, ONYPHE
+Copyright (c) 2018-2021, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.
