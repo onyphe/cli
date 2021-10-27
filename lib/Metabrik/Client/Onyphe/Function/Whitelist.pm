@@ -39,13 +39,17 @@ sub run {
    my $lookup = $arg->[0];
    $self->brik_help_run_file_not_found('run', $lookup) or return;
 
-   my $cidr = $arg->[1];
-   my ($cidr_mode, $cidr_field) = $cidr =~ m{^(cidr)=(\w+)$};
-   $cidr_field ||= 'ip';
-
    my $na;
-   if ($cidr_mode) {
-      $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
+   my $cidr_mode;
+   my $cidr_field;
+   my $cidr = $arg->[1];
+   if (defined($cidr)) {
+      ($cidr_mode, $cidr_field) = $cidr =~ m{^(cidr)=(\w+)$};
+      $cidr_field ||= 'ip';
+
+      if ($cidr_mode) {
+         $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
+      }
    }
 
    my $csv;
