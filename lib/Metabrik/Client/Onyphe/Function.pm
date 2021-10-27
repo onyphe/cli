@@ -99,4 +99,24 @@ sub parse {
    return \@a;
 }
 
+sub parse_v2 {
+   my $self = shift;
+   my ($arg) = @_;
+
+   my @a = Text::ParseWords::quotewords('\s+', 0, $arg);
+
+   my $args = {};
+   for (@a) {
+      my ($k, $v) = split(/\s*=\s*/, $_);
+      if (defined($k) && defined($v)) {
+         $args->{$k} = [ sort { $a cmp $b } split(/\s*,\s*/, $v) ];
+      }
+      elsif (defined($k)) {
+         $args->{$k} = 1;
+      }
+   }
+
+   return $args;
+}
+
 1;
