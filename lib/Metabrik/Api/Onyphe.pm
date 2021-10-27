@@ -53,9 +53,11 @@ sub brik_properties {
         search => [ qw(query apikey|OPTIONAL page|OPTIONAL) ],
         user => [ qw(apikey|OPTIONAL) ],
         export => [ qw(query callback apikey|OPTIONAL) ],
+        bulk => [ qw(api input callback apikey|OPTIONAL) ],
       },
       require_modules => {
          'Metabrik::String::Json' => [ ],
+         'Metabrik::File::Text' => [ ],
          'AnyEvent' => [ ],
          'AnyEvent::HTTP' => [ ],
          'URI::Escape' => [ ],
@@ -85,6 +87,7 @@ sub api {
    $self->log->verbose("api: using url[$apiurl]");
 
    $arg = URI::Escape::uri_escape_utf8($arg);
+   $self->log->debug("api: uri_escape_utf8 arg[$arg]");
 
    # Default callback
    $callback ||= sub {
@@ -303,6 +306,7 @@ sub export {
 
    my $apiurl = $self->apiurl;
    $query = URI::Escape::uri_escape_utf8($query);
+   $self->log->debug("export: uri_escape_utf8 query[$query]");
 
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
@@ -433,6 +437,155 @@ sub export {
    return $cv->recv;
 }
 
+#
+# run api::onyphe bulk /simple/datascan/ip ip.txt $cb $apikey
+#
+sub bulk {
+   my $self = shift;
+   my ($query, $callback, $apikey) = @_;
+
+   $apikey ||= $self->apikey;
+   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
+   $self->brik_help_run_undef_arg('bulk', $query) or return;
+   $self->brik_help_run_undef_arg('bulk', $callback) or return;
+
+   my $apiurl = $self->apiurl;
+
+   my ($api, $input) = $query =~ m{^\s*bulk\s*:\s*(\S+)\s+(\S+)}i;
+   $self->brik_help_run_undef_arg('bulk', $api) or return;
+   $self->brik_help_run_undef_arg('bulk', $input) or return;
+   $self->brik_help_run_file_not_found('bulk', $input) or return;
+
+   $self->log->verbose("bulk: api[$api] input[$input]");
+
+   my $ft = Metabrik::File::Text->new_from_brik_init($self) or return;
+   my $body = $ft->read($input) or return;
+
+   my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
+
+   my $url = $apiurl.'/bulk/'.$api;
+
+   $self->log->verbose("bulk: using url[$url]");
+
+   $self->add_headers({
+      'Authorization' => "apikey $apikey",
+      'Content-Type' => 'application/json',
+   });
+
+   # Abort on Ctrl+C
+   my $abort = 0;
+   $SIG{INT} = sub {
+      #print STDERR "Ctrl+C [$abort]\n";
+      $abort++;
+      return 1;
+   };
+
+   # Will store incomplete line for later processing
+   my $buf = '';
+
+   # To keep state between each page of results
+   my $state = {};
+
+   my $cv = AnyEvent->condvar;
+
+   AnyEvent::HTTP::http_post($url, $body,
+      # For each loop of processing, let callback work during 5 minutes
+      # before sending a timeout.
+      timeout => 300,
+      headers => {
+         'Authorization' => "apikey $apikey",
+         'Content-Type' => "application/json",
+      },
+      on_body => sub {
+         my ($data, $hdr) = @_;
+
+         if ($abort > 0) {
+            #print STDERR "abort\n";
+            return $cv->send;
+         }
+
+         $data = $buf.$data;  # Complete from previous remaining buf
+
+         my $status = $hdr->{Status};
+         my $encoding = $hdr->{'transfer-encoding'};
+         if ($status == 200 && $encoding eq 'chunked') {
+            # $this will contain all lines until the last one
+            # with \n ending chars. This last one will be put back
+            # into $buf for next processing.
+            # Thus, we only handle input stream on a line-by-line basis.
+            my ($this, $tail) = $data =~ m/^(.*\n)(.*)$/s;
+            # One line is not complete, add to buf and go to next:
+            if (!defined($this)) {
+               $buf = $data;
+               return 1;
+            }
+
+            my @lines = split(/\n/, $this);
+            $buf = $tail || '';
+
+            # Put in page format
+            my $page;
+            for (@lines) {
+               my $decode = $sj->decode($_);
+               if (!defined($decode)) {
+                  $self->log->error("bulk: unable to decode [$_]");
+                  next;
+               }
+               push @{$page->{results}}, $decode;
+            }
+
+            my $r = $callback->($page, $state);
+            if (! defined($r)) {
+               return $cv->send;
+            }
+         }
+         else {
+            #print STDERR "ERROR: loop: status [$status]\n";
+            print $data."\n";
+            return $cv->send;
+         }
+
+         return 1;
+      },
+      # Completion callback
+      sub {
+         my (undef, $hdr) = @_;
+
+         my $status = $hdr->{Status};
+         my $reason = $hdr->{Reason};
+         if ($status != 200 && $status != 598) {
+            $self->log->error("bulk: completion status [$status], reason ".
+               " [$reason]");
+            #print Data::Dumper::Dumper($hdr)."\n";
+         }
+
+         # Handle remaining $buf if any:
+         if (defined($buf) && length($buf)) {
+            my @lines = split(/\n/, $buf);
+            # Put in page format
+            my $page;
+            for (@lines) {
+               my $decode = $sj->decode($_);
+               if (!defined($decode)) {
+                  # On abort, line may be incomplete, don't print error.
+                  if (! $abort) {
+                     $self->log->error("bulk: unable to decode remaining [$_]");
+                  }
+                  next;
+               }
+               push @{$page->{results}}, $decode;
+            }
+            $callback->($page, $state);
+         }
+
+         return $cv->send;
+      },
+   );
+
+   # Wait for termination
+   return $cv->recv;
+}
+
 1;
 
 __END__
@@ -443,7 +596,7 @@ Metabrik::Api::Onyphe - api::onyphe Brik
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2014-2020, Patrice E<lt>GomoRE<gt> Auffret
+Copyright (c) 2018-2021, Patrice E<lt>GomoRE<gt> Auffret
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.
