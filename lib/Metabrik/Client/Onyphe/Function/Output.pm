@@ -19,6 +19,11 @@ sub brik_properties {
    };
 }
 
+#
+# | output format=txt dedup=domain
+# | output format=txt dedup=subnet fields=subnet
+# | output format=csv header=ip,domain fields=ip,domain
+#
 sub run {
    my $self = shift;
    my ($page, $state, $args) = @_;
@@ -87,18 +92,20 @@ sub run {
 
       #print Data::Dumper::Dumper(\@this_line)."\n";
 
-      if ($format eq 'csv' && defined($header) && !$state->{output}{header_print}) {
-         my $hdr = join('","', @$header);
-         print "\"$hdr\"\n";
-         $state->{output}{header_print}++;
-      }
-      if ($format eq 'csv') {
-         my $line = join('","', @this_line);
-         print "\"$line\"\n";
-      }
-      elsif ($format eq 'txt') {
-         my $line = join(',', @this_line);
-         print "$line\n";
+      if (@this_line) {
+         if ($format eq 'csv' && defined($header) && !$state->{output}{header_print}) {
+            my $hdr = join('","', @$header);
+            print "\"$hdr\"\n";
+            $state->{output}{header_print}++;
+         }
+         if ($format eq 'csv') {
+            my $line = join('","', @this_line);
+            print "\"$line\"\n";
+         }
+         elsif ($format eq 'txt') {
+            my $line = join(',', @this_line);
+            print "$line\n";
+         }
       }
 
       return 1;
