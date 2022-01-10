@@ -42,7 +42,7 @@ INSTALLATION
 
   Current list of custom functions:
   - addcount
-  - blacklist
+  - blocklist
   - count
   - dedup
   - exec
@@ -54,8 +54,12 @@ INSTALLATION
   - top
   - uniq
   - where
-  - whitelist
+  - allowlist
   - whois
+  - expand
+  - output
+  - fields
+  - splitsubnet
 
   G/ Enjoy
 
@@ -118,7 +122,7 @@ EXAMPLES
   ip
   1.1.1.1
   2.2.2.2
-  $ onyphe -export 'category:threatlist -exists:subnet | whitelist input.csv cidr=ip'
+  $ onyphe -export 'category:threatlist -exists:subnet | allowlist input.csv cidr=ip'
 
   # Display top countries for an organization:
   $ onyphe -export 'category:geoloc organization:"Global Layer B.V." | top country | piechart'

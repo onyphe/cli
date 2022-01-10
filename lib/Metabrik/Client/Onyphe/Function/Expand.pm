@@ -19,11 +19,25 @@ sub brik_properties {
    };
 }
 
+#
+# When a document has an ARRAY of domains into domain field, we want
+# to create as many documents as the number of domains with same
+# values for other fields:
+#
+# NOTE: currently can only expand on 1 field.
+#
+# | expand domain
+#
 sub run {
    my $self = shift;
-   my ($page, $state, $field) = @_;
+   my ($page, $state, $args) = @_;
 
    $self->brik_help_run_undef_arg('run', $page) or return;
+   $self->brik_help_run_undef_arg('run', $args) or return;
+
+   my $arg = $self->parse($args);
+   my $field = $arg->[0];
+
    $self->brik_help_run_undef_arg('run', $field) or return;
 
    my $cb = sub {
@@ -31,17 +45,10 @@ sub run {
 
       my $value = $self->value_as_array($this, $field) or return 1;
 
-      # Results are ordered in latest time first,
-      # thus we keep the freshest result.
-      my $keep = 0;
       for my $v (@$value) {
-         if (! exists($state->{expand}{$v})) {
-            $state->{expand}{$v}++;
-            $keep = 1;
-         }
-      }
-      if ($keep) {
-         push @$new, $this;
+         my $copy = $self->clone($this);
+         $copy->{$field} = [ $v ];
+         push @$new, $copy;
       }
 
       return 1;

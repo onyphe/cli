@@ -5,6 +5,9 @@
 use strict;
 use warnings;
 
+use utf8;
+binmode(STDOUT, ":utf8");
+
 use Getopt::Long;
 use Metabrik::Client::Onyphe;
 use Metabrik::Client::Onyphe::Log;
@@ -36,6 +39,9 @@ GetOptions(
    "apiurl=s" => \$lopts{apiurl},
    "wait=i" => \$lopts{wait},
    "master" => \$lopts{master},
+   "apisize=i" => \$lopts{apisize},
+   "apitrackquery=i" => \$lopts{apitrackquery},
+   "apikeepalive=i" => \$lopts{apikeepalive},
 ) or usage();
 
 # Load API key from onyphe rc file
@@ -54,6 +60,9 @@ $cli->brik_init;
 $cli->log->level($lopts{verbose});
 $cli->apikey($lopts{apikey});
 $cli->apiurl($lopts{apiurl});
+$cli->apisize($lopts{apisize} || 10);
+$cli->apitrackquery($lopts{apitrackquery} ? 1 : 0);
+$cli->apikeepalive($lopts{apikeepalive} ? 1 : 0);
 $cli->autoscroll($lopts{autoscroll} ? 1 : 0);
 $cli->wait($lopts{wait});
 $cli->master($lopts{master} ? 1 : 0);

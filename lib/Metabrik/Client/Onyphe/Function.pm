@@ -22,11 +22,14 @@ sub brik_properties {
       commands => {
          value => [ qw(doc field) ],
          value_as_array => [ qw(doc field) ],
+         clone => [ qw(doc) ],
+         flatten => [ qw(doc) ],
          iter => [ qw(page callback) ],
          return => [ qw(page new state|OPTIONAL) ],
       },
       require_modules => {
          'Text::ParseWords' => [ ],
+         'Storable' => [ qw(dclone) ],
       },
    };
 }
@@ -59,6 +62,41 @@ sub value_as_array {
    $value = ref($value) eq 'ARRAY' ? $value : [ $value ];
 
    return $value;
+}
+
+sub clone {
+   my $self = shift;
+   my ($doc) = @_;
+
+   $self->brik_help_run_undef_arg('clone', $doc) or return;
+
+   return Storable::dclone($doc);
+}
+
+sub flatten {
+   my $self = shift;
+   my ($doc) = @_;
+
+   $self->brik_help_run_undef_arg('flatten', $doc) or return;
+
+   my $new = {};
+   my $sub; $sub = sub {
+      my ($doc, $field) = @_;
+
+      for my $k (keys %$doc) {
+         my $this_field = defined($field) ? "$field.$k" : $k;
+         if (ref($doc->{$k}) eq 'HASH') {
+            $sub->($doc->{$k}, $this_field);
+         }
+         else {
+            $new->{$this_field} = $doc->{$k};
+         }
+      }
+
+      return $new;
+   };
+
+   return $sub->($doc);
 }
 
 # Will iterate over all object results. Output of functions will create an new ARRAY

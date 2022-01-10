@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '2.04';
+our $VERSION = '3.00';
 
 use base qw(Metabrik);
 
@@ -18,6 +18,9 @@ sub brik_properties {
       attributes => {
          apikey => [ qw(apikey) ],
          apiurl => [ qw(apiurl) ],
+         apisize => [ qw(apisize) ],
+         apikeepalive => [ qw(true) ],
+         apitrackquery => [ qw(apitrackquery) ],
          autoscroll => [ qw(0|1) ],
          wait => [ qw(seconds) ],
          master => [ qw(0|1) ],
@@ -59,16 +62,59 @@ sub brik_init {
    return $self->SUPER::brik_init;
 }
 
+sub build_ao {
+   my $self = shift;
+   my ($api) = @_;
+
+   my $ao = $self->_ao;
+   my $apiurl = $self->apiurl;
+   my $apisize = $self->apisize;
+   my $apikeepalive = $self->apikeepalive;
+   my $apitrackquery = $self->apitrackquery;
+   my $master = $self->master;
+
+   my @args = ();
+   if (defined($apisize)) {
+      push @args, 'size='.$apisize;
+   }
+   if (defined($apitrackquery) && $apitrackquery) {
+      push @args, 'trackquery=true';
+   }
+   if (defined($apikeepalive) && $apikeepalive) {
+      push @args, 'keepalive=true';
+   }
+
+   my $apiargs;
+   if (@args) {
+      $apiargs = '?'.join('&', @args);
+   }
+
+   $ao->apiurl($apiurl);
+   $ao->apiargs($apiargs);
+   $ao->master($master);
+
+   if (defined($apiargs)) {
+      $self->log->verbose("client::onyphe: build_ao: args[$apiargs]");
+   }
+
+   return $ao;
+}
+
 sub user {
    my $self = shift;
 
    my $apikey = $self->apikey;
-   my $apiurl = $self->apiurl;
+   my $ao = $self->build_ao;
+   my $sj = $self->_sj;
 
-   my $ao = $self->_ao;
-   $ao->apiurl($apiurl);
+   my $callback = sub {
+      my ($res) = @_;
+      my $user = $res->{results}[0];
+      #print Data::Dumper::Dumper($user)."\n";
+      print $sj->encode($user)."\n";
+   };
 
-   return $ao->user($apikey);
+   return $ao->user($apikey, $callback);
 }
 
 sub simple {
@@ -81,10 +127,7 @@ sub simple {
    $self->brik_help_run_undef_arg('simple', $api) or return;
    $self->brik_help_run_undef_arg('simple', $value) or return;
 
-   my $apiurl = $self->apiurl;
-
-   my $ao = $self->_ao;
-   $ao->apiurl($apiurl);
+   my $ao = $self->build_ao;
 
    $api = "simple_$api";
    if (! $ao->can($api)) {
@@ -126,10 +169,7 @@ sub summary {
    $self->brik_help_run_undef_arg('summary', $api) or return;
    $self->brik_help_run_undef_arg('summary', $value) or return;
 
-   my $apiurl = $self->apiurl;
-
-   my $ao = $self->_ao;
-   $ao->apiurl($apiurl);
+   my $ao = $self->build_ao;
 
    $api = "summary_$api";
    if (! $ao->can($api)) {
@@ -148,10 +188,7 @@ sub search {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('search', $query) or return;
 
-   my $apiurl = $self->apiurl;
-
-   my $ao = $self->_ao;
-   $ao->apiurl($apiurl);
+   my $ao = $self->build_ao;
 
    if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
       return $self->log->error("search: please start your search with ".
@@ -190,19 +227,14 @@ sub export {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('export', $query) or return;
 
-   my $apiurl = $self->apiurl;
-   my $master = $self->master;
-
-   my $ao = $self->_ao;
-   $ao->apiurl($apiurl);
-   $ao->master($master);
+   my $ao = $self->build_ao;
 
    if ($query !~ m{^\s*category\s*:\s*(\S+)\s+(.+)\s*$}i) {
       return $self->log->error("export: please start your search with ".
          "'category:CATEGORY'");
    }
 
-   $ao->export($query, $callback, $apikey) or return;
+   $ao->export($query, $apikey, $currentpage, $callback) or return;
 
    return 1;
 }
@@ -215,17 +247,14 @@ sub bulk {
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('bulk', $query) or return;
 
-   my $apiurl = $self->apiurl;
-
-   my $ao = $self->_ao;
-   $ao->apiurl($apiurl);
+   my $ao = $self->build_ao;
 
    if ($query !~ m{^\s*bulk\s*:\s*(\S+)\s+(\S+)(.+)\s*$}i) {
       return $self->log->error("bulk: please start your search with ".
          "'bulk:BULK_API INPUT_FILE'");
    }
 
-   $ao->bulk($query, $callback, $apikey) or return;
+   $ao->bulk($query, $apikey, $currentpage, $callback) or return;
 
    return 1;
 }
@@ -240,7 +269,8 @@ sub pipeline {
 
    my $sj = $self->_sj;
    my $apikey = $self->apikey;
-   my $apiurl = $self->apiurl;
+   my $ao = $self->build_ao;
+   my $apiurl = $ao->apiurl;
 
    my @cmd = split(/\s*\|\s*-?/, $pipeline);
    if (@cmd == 0) {
@@ -283,7 +313,7 @@ sub pipeline {
          eval("use $module;");
          if ($@) {
             chomp($@);
-            $self->log->error("pipeline: unknown function [$function[0]]");
+            $self->log->error("pipeline: use function failed [$function[0]]");
             return;
          }
          my $function = $module->new_from_brik_init($self);
@@ -294,6 +324,7 @@ sub pipeline {
          # So function can call main client::onyphe client
          $function->apiurl($apiurl);
          $function->apikey($apikey);
+         # XXX: apiargs?
 
          my $argument = $function[1];
 
@@ -325,6 +356,7 @@ sub pipeline {
       return $page;
    };
 
+   $self->log->verbose("api[$api]");
    $self->$api($query, $currentpage, $maxpage, $callback);
 
    if (defined($last_function) && defined($last_page)) {

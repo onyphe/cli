@@ -18,6 +18,7 @@ sub brik_properties {
       attributes => {
          apikey => [ qw(key) ],
          apiurl => [ qw(url) ],
+         apiargs => [ qw(args) ],
          wait => [ qw(seconds) ],
          master => [ qw(0|1) ],
       },
@@ -79,6 +80,7 @@ sub api {
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
    my $apiurl = $self->apiurl;
+   my $apiargs = $self->apiargs;
    $self->add_headers({
       'Authorization' => "apikey $apikey",
       'Content-Type' => 'application/json',
@@ -89,23 +91,24 @@ sub api {
    $arg = URI::Escape::uri_escape_utf8($arg);
    $self->log->debug("api: uri_escape_utf8 arg[$arg]");
 
-   # Default callback
+   # Default callback does nothing:
    $callback ||= sub {
       my ($page) = @_;
-
-      my $results = $page->{results};
-      if (defined($results)) {
-         for (@$results) {
-            print $sj->encode($_)."\n";
-         }
-      }
 
       return $page;
    };
 
    my $url = $apiurl.'/'.$api.'/'.$arg;
+   if (defined($apiargs)) {
+      $url .= $apiargs;
+   }
    if (defined($currentpage)) {
-      $url .= '?page='.$currentpage;
+      if (!defined($apiargs)) {
+         $url .= '?page='.$currentpage;
+      }
+      else {
+         $url .= '&page='.$currentpage;
+      }
    }
 
    my $abort = 0;
@@ -290,14 +293,14 @@ sub search {
 
 sub user {
    my $self = shift;
-   my ($apikey) = @_;
+   my ($apikey, $callback) = @_;
 
-   return $self->api('user', '', $apikey);
+   return $self->api('user', '', $apikey, 1, $callback);
 }
 
 sub export {
    my $self = shift;
-   my ($query, $callback, $apikey) = @_;
+   my ($query, $apikey, $currentpage, $callback) = @_;
 
    $apikey ||= $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
@@ -305,6 +308,7 @@ sub export {
    $self->brik_help_run_undef_arg('export', $callback) or return;
 
    my $apiurl = $self->apiurl;
+   my $apiargs = $self->apiargs;
    $query = URI::Escape::uri_escape_utf8($query);
    $self->log->debug("export: uri_escape_utf8 query[$query]");
 
@@ -317,6 +321,9 @@ sub export {
       $api = '/master/export/';
    }
    my $url = $apiurl.$api.$query;
+   if (defined($apiargs)) {
+      $url .= $apiargs;
+   }
 
    $self->add_headers({
       'Authorization' => "apikey $apikey",
@@ -379,15 +386,18 @@ sub export {
             for (@lines) {
                my $decode = $sj->decode($_);
                if (!defined($decode)) {
-                  $self->log->error("unable to decode [$_]");
+                  $self->log->error("export: unable to decode [$_]");
                   next;
                }
+               next if (! $decode->{'@category'} || $decode->{'@category'} eq 'none');
                push @{$page->{results}}, $decode;
             }
 
-            my $r = $callback->($page, $state);
-            if (! defined($r)) {
-               return $cv->send;
+            if ($page->{results} && @{$page->{results}}) {
+               my $r = $callback->($page, $state);
+               if (! defined($r)) {
+                  return $cv->send;
+               }
             }
          }
          else {
@@ -420,13 +430,14 @@ sub export {
                if (!defined($decode)) {
                   # On abort, line may be incomplete, don't print error.
                   if (! $abort) {
-                     $self->log->error("unable to decode remaining [$_]");
+                     $self->log->error("export: unable to decode remaining [$_]");
                   }
                   next;
                }
+               next if (! $decode->{'@category'} || $decode->{'@category'} eq 'none');
                push @{$page->{results}}, $decode;
             }
-            $callback->($page, $state);
+            $callback->($page, $state) if ($page->{results} && @{$page->{results}});
          }
 
          return $cv->send;
@@ -442,7 +453,7 @@ sub export {
 #
 sub bulk {
    my $self = shift;
-   my ($query, $callback, $apikey) = @_;
+   my ($query, $apikey, $currentpage, $callback) = @_;
 
    $apikey ||= $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
@@ -450,6 +461,7 @@ sub bulk {
    $self->brik_help_run_undef_arg('bulk', $callback) or return;
 
    my $apiurl = $self->apiurl;
+   my $apiargs = $self->apiargs;
 
    my ($api, $input) = $query =~ m{^\s*bulk\s*:\s*(\S+)\s+(\S+)}i;
    $self->brik_help_run_undef_arg('bulk', $api) or return;
@@ -464,6 +476,9 @@ sub bulk {
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
 
    my $url = $apiurl.'/bulk/'.$api;
+   if (defined($apiargs)) {
+      $url .= $apiargs;
+   }
 
    $self->log->verbose("bulk: using url[$url]");
 
@@ -531,12 +546,15 @@ sub bulk {
                   $self->log->error("bulk: unable to decode [$_]");
                   next;
                }
+               next if (! $decode->{'@category'} || $decode->{'@category'} eq 'none');
                push @{$page->{results}}, $decode;
             }
 
-            my $r = $callback->($page, $state);
-            if (! defined($r)) {
-               return $cv->send;
+            if ($page->{results} && @{$page->{results}}) {
+               my $r = $callback->($page, $state);
+               if (! defined($r)) {
+                  return $cv->send;
+               }
             }
          }
          else {
@@ -573,9 +591,10 @@ sub bulk {
                   }
                   next;
                }
+               next if (! $decode->{'@category'} || $decode->{'@category'} eq 'none');
                push @{$page->{results}}, $decode;
             }
-            $callback->($page, $state);
+            $callback->($page, $state) if ($page->{results} && @{$page->{results}});
          }
 
          return $cv->send;

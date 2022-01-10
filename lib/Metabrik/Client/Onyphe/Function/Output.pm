@@ -57,17 +57,19 @@ sub run {
    my $cb = sub {
       my ($this, $state, $new, $format, $fields, $dedup) = @_;
 
-      #print Data::Dumper::Dumper($this)."\n";
+      my $doc = $self->flatten($this);
+      #print Data::Dumper::Dumper($doc)."\n";
 
       my @this_line = ();
-      for my $k (sort { $a cmp $b } keys %$this) {
+      for my $k (sort { $a cmp $b } keys %$doc) {
          # Only keep wanted fields when given, otherwise use all fields:
          if (defined($fields)) {
             next unless exists($fields->{$k});
+            #print "K[$k]\n";
          }
 
          # Make it always an ARRAY:
-         my $ary = (ref($this->{$k}) eq 'ARRAY') ? $this->{$k} : [ $this->{$k} ];
+         my $ary = (ref($doc->{$k}) eq 'ARRAY') ? $doc->{$k} : [ $doc->{$k} ];
 
          # Perform action against all elements of the ARRAY:
          for my $e (@$ary) {
