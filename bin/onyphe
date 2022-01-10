@@ -14,35 +14,55 @@ use Metabrik::Client::Onyphe::Log;
 
 # Default values
 my %lopts = (
+   # General options:
    verbose => 1,
    onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
-   page => '1',
-   autoscroll => '0',
+   autoscroll => 0,
+   maxpage => 1000,
    apiurl => 'https://www.onyphe.io/api/v2',
+   apisize => 10,
+   apitrackquery => 0,
+   apikeepalive => 0,
    wait => 1,
+   # API options:
+   search => 1,  # Default to use Search API
+   bulk => 0,    # Enable Bulk API
+   simple => 0,  # Use Simple API
+   best => 0,    # Enable Best API
+   category => 'datascan',
 );
+
+#my $oql = pop @ARGV;  # Global query
+#print STDERR "OQL: [$oql]\n";
 
 # Option parsing
 GetOptions(
-   "user" => \$lopts{user},
-   "simple=s" => \$lopts{simple},
-   "summary=s" => \$lopts{summary},
-   "value=s" => \$lopts{value},
-   "search=s" => \$lopts{search},
-   "export=s" => \$lopts{export},
-   "bulk=s" => \$lopts{bulk},
-   "verbose=i" => \$lopts{verbose},
-   "apikey=s" => \$lopts{apikey},
-   "page=i" => \$lopts{page},
-   "maxpage=i" => \$lopts{maxpage},
-   "autoscroll=i" => \$lopts{autoscroll},
-   "apiurl=s" => \$lopts{apiurl},
-   "wait=i" => \$lopts{wait},
-   "master" => \$lopts{master},
-   "apisize=i" => \$lopts{apisize},
-   "apitrackquery=i" => \$lopts{apitrackquery},
-   "apikeepalive=i" => \$lopts{apikeepalive},
+   # General options:
+   "verbose=i" => \$lopts{verbose},             # -verbose 1
+   "autoscroll=i" => \$lopts{autoscroll},       # -autoscroll 1
+   "maxpage=i" => \$lopts{maxpage},             # -maxpage 10
+   "apiurl=s" => \$lopts{apiurl},               # -apiurl https://beta.onyphe.io/api/v2
+   "apikey=s" => \$lopts{apikey},               # -apikey YOUR_APIKEY
+   "apisize=i" => \$lopts{apisize},             # -apisize 100
+   "apitrackquery=i" => \$lopts{apitrackquery}, # -apitrackquery 1
+   "apikeepalive=i" => \$lopts{apikeepalive},   # -apikeelalive 1
+   "wait=i" => \$lopts{wait},                   # -wait 3
+   # API options:
+   "category=s" => \$lopts{category},  # -category datascan,synscan
+   "bulk" => \$lopts{bulk},            # -bulk
+   "best" => \$lopts{best},            # -best
+   # APIs:
+   "user" => \$lopts{user},            # -user
+   "simple" => \$lopts{simple},        # -simple
+   "summary=s" => \$lopts{summary},    # -summary ip, -summary domain, -summary hostname
+   "search" => \$lopts{search},        # -search
+   "export" => \$lopts{export},        # -export
+   "alert=s" => \$lopts{alert},        # -alert list
 ) or usage();
+
+my $ql = pop @ARGV;  # Global query
+#print STDERR "QL: [$ql]\n" if defined($ql);
+#print Data::Dumper::Dumper(\%lopts)."\n";
 
 # Load API key from onyphe rc file
 load_onyphe_rc(%lopts);
@@ -58,42 +78,43 @@ my $cli = Metabrik::Client::Onyphe->new_brik_init;
 $cli->log($log);
 $cli->brik_init;
 $cli->log->level($lopts{verbose});
-$cli->apikey($lopts{apikey});
+
+# Set general options:
+$cli->autoscroll($lopts{autoscroll});
+$cli->maxpage($lopts{maxpage});
 $cli->apiurl($lopts{apiurl});
-$cli->apisize($lopts{apisize} || 10);
-$cli->apitrackquery($lopts{apitrackquery} ? 1 : 0);
-$cli->apikeepalive($lopts{apikeepalive} ? 1 : 0);
-$cli->autoscroll($lopts{autoscroll} ? 1 : 0);
+$cli->apikey($lopts{apikey});
+$cli->apisize($lopts{apisize});
+$cli->apitrackquery($lopts{apitrackquery});
+$cli->apikeepalive($lopts{apikeepalive});
 $cli->wait($lopts{wait});
-$cli->master($lopts{master} ? 1 : 0);
+
+# Set API options:
+$cli->category($lopts{category});
+$cli->bulk($lopts{bulk});
+$cli->best($lopts{best});
 
 # Launch query
-if ($lopts{search}) {   # Search API query mode with pipeline support
-   $cli->pipeline($lopts{search}, 'search', $lopts{page}, $lopts{maxpage})
-      or $cli->log->fatal("search: aborted");
-}
-elsif ($lopts{export}) {   # Export API query mode with pipeline support
-   $cli->pipeline($lopts{export}, 'export')
-      or $cli->log->fatal("export: aborted");
-}
-elsif ($lopts{bulk}) {
-   $cli->pipeline($lopts{bulk}, 'bulk')
-      or $cli->log->fatal("bulk: aborted");
-}
-elsif ($lopts{summary}) {
-   my $summary = $lopts{summary};
-   my $value = $lopts{value};
-   $cli->summary($summary, $value)
-      or $cli->log->fatal("summary: aborted");
+if ($lopts{export}) {
+   #$cli->pipeline($lopts{export}, 'export') or $cli->log->fatal("export: aborted");
+   $cli->export($ql) or $cli->log->fatal("export: aborted");
 }
 elsif ($lopts{user}) {
-   $cli->user() or $cli->log->fatal("user: aborted");
+   $cli->user($ql) or $cli->log->fatal("user: aborted");
 }
-else {  # Simple API query mode
-   my $simple = $lopts{simple};
-   my $value = $lopts{value};
-   $cli->simple($simple, $value, $lopts{page}, $lopts{maxpage})
-      or $cli->log->fatal("simple: aborted");
+elsif ($lopts{simple}) {
+   $cli->simple($ql) or $cli->log->fatal("simple: aborted");
+}
+elsif ($lopts{summary}) {
+   $cli->summary($ql, $lopts{summary}) or $cli->log->fatal("summary: aborted");
+}
+elsif ($lopts{alert}) {
+   $cli->alert($lopts{alert}, $ql) or $cli->log->fatal("alert: aborted");
+}
+else {  # Use Search API by default:
+   #$cli->pipeline($lopts{search}, 'search', $lopts{page}, $lopts{maxpage})
+      #or $cli->log->fatal("search: aborted");
+   $cli->search($ql) or $cli->log->fatal("search: aborted");
 }
 
 exit(0);
@@ -105,25 +126,45 @@ exit(0);
 sub usage {
    print<<EOF
 
-Usage: onyphe [options] -search 'category:CATEGORY SEARCH'
+Usage: onyphe [options] -search -category datascan 'OQL | PQL'
        onyphe [options] -user
-       onyphe [options] -simple API -value VALUE
-       onyphe [options] -summary API -value VALUE
+       onyphe [options] -simple ip -category category 'IP | PQL'
+       onyphe [options] -simple data -category category 'DATA | PQL'
+       onyphe [options] -summary ip '1.1.1.1 | PQL'
+       onyphe [options] -summary domain 'example.com | PQL'
+       onyphe [options] -summary domain -bulk 'domains.txt | PQL'
+       onyphe [options] -export -category datascan 'OQL | PQL'
+       onyphe [options] -alert -list
+       onyphe [options] -alert -add -category datascan 'OQL'
+       onyphe [options] -alert -del \$id
 
-   -user                                   get information on your license
-   -apikey <APIKEY>                        your personal ONYPHE API key
-   -search <SEARCH>                        use Search API for query
-   -export <SEARCH>                        use Export API for query
-   -bulk <SEARCH>                          use Bulk API for query
-   -summary <API>                          use Summary API for query (need -value)
-   -simple <API>                           use Simple API for query (need -value)
-   -value <VALUE>                          value to use when using Simple or Summary API
-   -page <PAGE>                            fetch results for page (default: 1)
+General options:
+
+   -verbose <0|1|2|3>                      verbosity level (default: 1)
    -autoscroll <0|1>                       use autoscroll feature (default: 0)
                                            WARNING: may consume a lot of credit
-   -maxpage <MAXPAGE>                      max page to fetch in autoscroll mode
-   -verbose <0|1|2|3>                      verbosity level (default: 1)
+   -maxpage <MAXPAGE>                      max page to fetch when autoscroll (default: 1000)
    -wait <SECONDS>                         wait time in regards to rate limit (default: 1)
+   -apiurl <URL>                           use another URL endpoint for API calls
+   -apikey <APIKEY>                        your personal ONYPHE API key
+   -apitrackquery <0|1>                    add trackquery field into results (default: 0)
+   -apikeepalive <0|1>                     use a keepalive message (default: 0)
+
+API options:
+   -category <category1,categor2,...>      give which category to query (default: datascan)
+   -bulk                                   use Bulk API verions for given query
+   -best                                   use Best API verions for given query
+
+APIs:
+
+   -user                                   get information on your license
+   -search 'OQL | PQL'                     use Search API for query
+   -export 'OQL | PQL'                     use Export API for query
+   -simple <ip|domain|hostname|data> 'PQL' use Simple API for query
+   -summary <ip|domain|hostname> 'PQL'     use Summary API for query
+   -alert list                             use Alert API for query
+   -alert del \$id                         use Alert API for query
+   -alert add 'OQL'                        use Alert API for query
 
 EOF
 ;
@@ -161,8 +202,8 @@ sub sanity_checks {
 
    if (! defined($lopts{search}) && ! defined($lopts{simple})
    &&  ! defined($lopts{summary}) && ! defined($lopts{user})
-   &&  ! defined($lopts{export}) && ! defined($lopts{bulk})) {
-      print "ERROR: need -search, -simple, -summary, -export, -bulk or -user argument\n";
+   &&  ! defined($lopts{export})) {
+      print "ERROR: need -search, -simple, -summary, -export or -user argument\n";
       usage();
    }
 
@@ -171,28 +212,23 @@ sub sanity_checks {
       usage();
    }
 
-   if (($lopts{simple} || $lopts{summary}) && ! defined($lopts{value})) {
-      print "ERROR: -simple or -summary argument used but -value argument missing\n";
-      usage();
-   }
+   #if (($lopts{simple} || $lopts{summary}) && ! defined($lopts{value})) {
+      #print "ERROR: -simple or -summary argument used but -value argument missing\n";
+      #usage();
+   #}
 
-   if (! ($lopts{simple} || $lopts{summary} || $lopts{bulk}) && defined($lopts{value})) {
-      print "ERROR: -simple argument missing but -value argument used\n";
-      usage();
-   }
-
-   if ($lopts{page} !~ m{^\d+$}) {
-      print "ERROR: invalid page chosen: ".$lopts{page}."\n";
-      usage();
-   }
+   #if (! ($lopts{simple} || $lopts{summary} || $lopts{bulk}) && defined($lopts{value})) {
+      #print "ERROR: -simple argument missing but -value argument used\n";
+      #usage();
+   #}
 
    if (defined($lopts{maxpage}) && $lopts{maxpage} !~ m{^\d+$}) {
-      print "ERROR: invalid maxpage chosen: ".$lopts{maxpage}."\n";
+      print "ERROR: invalid maxpage value chosen: ".$lopts{maxpage}."\n";
       usage();
    }
 
    if ($lopts{verbose} !~ m{^\d+$}) {
-      print "ERROR: invalid verbose mode chosen: ".$lopts{verbose}."\n";
+      print "ERROR: invalid verbose value chosen: ".$lopts{verbose}."\n";
       usage();
    }
 
@@ -205,7 +241,7 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2021, ONYPHE
+Copyright (c) 2018-2022, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

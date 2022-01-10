@@ -1,5 +1,5 @@
 #
-# $Id: Onyphe.pm,v d629ccff5f0c 2018/12/03 12:59:47 gomor $
+# $Id$
 #
 package Metabrik::Client::Onyphe;
 use strict;
@@ -16,14 +16,19 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       attributes => {
-         apikey => [ qw(apikey) ],
-         apiurl => [ qw(apiurl) ],
-         apisize => [ qw(apisize) ],
-         apikeepalive => [ qw(true) ],
-         apitrackquery => [ qw(apitrackquery) ],
+         # General options:
          autoscroll => [ qw(0|1) ],
+         maxpage => [ qw(value) ],
+         apiurl => [ qw(apiurl) ],
+         apikey => [ qw(apikey) ],
+         apisize => [ qw(apisize) ],
+         apitrackquery => [ qw(apitrackquery) ],
+         apikeepalive => [ qw(true) ],
          wait => [ qw(seconds) ],
-         master => [ qw(0|1) ],
+         # API options:
+         category => [ qw(category|categories) ],
+         bulk => [ qw(0|1) ],
+         best => [ qw(0|1) ],
          _ao => [ qw(INTERNAL) ],
          _sj => [ qw(INTERNAL) ],
       },
@@ -33,13 +38,14 @@ sub brik_properties {
          wait => 1,
       },
       commands => {
-         user => [ ],
-         simple => [ qw(api value page|OPTIONAL maxpage|OPTIONAL) ],
-         summary => [ qw(api value) ],
-         search => [ qw(query page|OPTIONAL maxpage|OPTIONAL) ],
-         export => [ qw(query) ],
-         bulk => [ qw(api input) ],
-         pipeline => [ qw(pipeline api currentpage|OPTIONAL maxpage|OPTIONAL) ],
+         build_ao => [ ],
+         pipeline => [ qw(results state OPL|OPTIONAL) ],
+         user => [ qw(OPL|OPTIONAL) ],
+         search => [ qw(QL) ],
+         export => [ qw(QL) ],
+         simple => [ qw(api QL|OPTIONAL) ],
+         summary => [ qw(api QL|OPTIONAL) ],
+         alert => [ qw(api arg) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
@@ -64,14 +70,13 @@ sub brik_init {
 
 sub build_ao {
    my $self = shift;
-   my ($api) = @_;
 
    my $ao = $self->_ao;
    my $apiurl = $self->apiurl;
+   my $apikey = $self->apikey;
    my $apisize = $self->apisize;
    my $apikeepalive = $self->apikeepalive;
    my $apitrackquery = $self->apitrackquery;
-   my $master = $self->master;
 
    my @args = ();
    if (defined($apisize)) {
@@ -90,8 +95,8 @@ sub build_ao {
    }
 
    $ao->apiurl($apiurl);
+   $ao->apikey($apikey);
    $ao->apiargs($apiargs);
-   $ao->master($master);
 
    if (defined($apiargs)) {
       $self->log->verbose("client::onyphe: build_ao: args[$apiargs]");
@@ -100,126 +105,138 @@ sub build_ao {
    return $ao;
 }
 
-sub user {
+sub split_ql {
    my $self = shift;
+   my ($ql) = @_;
 
-   my $apikey = $self->apikey;
-   my $ao = $self->build_ao;
-   my $sj = $self->_sj;
+   my ($oql, $opl) = split(/\s*\|\s*/, $ql, 2);
 
-   my $callback = sub {
-      my ($res) = @_;
-      my $user = $res->{results}[0];
-      #print Data::Dumper::Dumper($user)."\n";
-      print $sj->encode($user)."\n";
-   };
+   #$self->log->debug("split_ql: ql[$ql] oql[$oql] opl[$opl]");
 
-   return $ao->user($apikey, $callback);
+   return [ $oql, $opl ];
 }
 
-sub simple {
+#
+# $self->user();
+# $self->user("uniq vulnscan.cve");
+#
+sub user {
    my $self = shift;
-   my ($api, $value, $currentpage, $maxpage) = @_;
-
-   $currentpage ||= 1;
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
-   $self->brik_help_run_undef_arg('simple', $api) or return;
-   $self->brik_help_run_undef_arg('simple', $value) or return;
+   my ($ql) = @_;
 
    my $ao = $self->build_ao;
 
-   $api = "simple_$api";
-   if (! $ao->can($api)) {
-      return $self->log->error("simple: api [$api] unknown");
+   $ql = $self->split_ql($ql);
+
+   # To keep state between each page of results:
+   my $state = {};
+
+   my $results = $ao->user();
+   return $self->pipeline($results, $ql->[0], $state);
+}
+
+#
+# $self->search("product:nginx");
+# $self->search("product:nginx | uniq domain");
+#
+sub search {
+   my $self = shift;
+   my ($ql) = @_;
+
+   my $ao = $self->build_ao;
+   my $category = $self->category;
+
+   $ql = "category:$category $ql";
+
+   my $autoscroll = $self->autoscroll;
+   my $maxpage = 1;
+   if ($autoscroll) {
+      $maxpage = $self->maxpage;
    }
 
-   $self->log->verbose("simple: requesting page [$currentpage]");
+   $ql = $self->split_ql($ql);
 
-   my $page = $ao->$api($value, $apikey, $currentpage) or return;
+   # To keep state between each page of results:
+   my $state = {};
 
-   $maxpage ||= $page->{max_page} || 1;
-   $self->log->verbose("simple: maxpage is [$maxpage]");
-
-   $self->log->info("simple: page [$currentpage/$maxpage] fetched");
-
-   if ($self->autoscroll && ++$currentpage <= $maxpage) {
-      my $abort = 0;
-      $SIG{INT} = sub {
-         $abort = 1;
-      };
-      for ($currentpage..$maxpage) {
-         $self->log->verbose("simple: scrolling page [$_]");
-         $ao->$api($value, $apikey, $_) or return;
-         my $perc = sprintf("%.02f%%", $_ / $maxpage * 100);
-         $self->log->info("simple: page [$_/$maxpage] fetched ($perc)...");
-         last if $abort;
-      }
+   for my $page (1..$maxpage) {
+      my $results = $ao->search($ql->[0]);
+      $self->pipeline($results, $ql->[1], $state);
    }
 
    return 1;
 }
 
+#
+# $self->export("product:nginx");
+# $self->export("product:nginx | uniq domain");
+#
+sub export {
+   my $self = shift;
+   my ($ql) = @_;
+
+   my $ao = $self->build_ao;
+   my $category = $self->category;
+
+   $ql = "category:$category $ql";
+
+   $ql = $self->split_ql($ql);
+
+   # To keep state between each page of results:
+   my $state = {};
+
+   # XXX: move to global and all APIs use that callback all times (even those not streamed):
+   my $callback = sub {
+      my ($results) = @_;
+
+      $self->pipeline($results, $ql->[1], $state);
+   };
+
+   return $ao->export($ql->[0], $callback);
+}
+
+#
+# $self->simple("1.1.1.1");
+# $self->simple("1.1.1.1 | uniq domain");
+#
+sub simple {
+   my $self = shift;
+   my ($ql) = @_;
+
+   my $ao = $self->build_ao;
+   my $category = $self->category;
+
+   $ql = $self->split_ql($ql);
+
+   my $results = $ao->simple($ql->[0], $category);
+
+   # To keep state between each page of results:
+   my $state = {};
+
+   return $self->pipeline($results, $ql->[1], $state);
+}
+
+#
+# $self->summary("1.1.1.1", "ip");
+# $self->summary("1.1.1.1 | uniq domain", "ip");
+#
 sub summary {
    my $self = shift;
-   my ($api, $value) = @_;
-
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
-   $self->brik_help_run_undef_arg('summary', $api) or return;
-   $self->brik_help_run_undef_arg('summary', $value) or return;
+   my ($ql, $type) = @_;
 
    my $ao = $self->build_ao;
 
-   $api = "summary_$api";
-   if (! $ao->can($api)) {
-      return $self->log->error("summary: api [$api] unknown");
-   }
+   $ql = $self->split_ql($ql);
 
-   return $ao->$api($value, $apikey);
+   my $results = $ao->summary($ql->[0], $type);
+
+   # To keep state between each page of results:
+   my $state = {};
+
+   return $self->pipeline($results, $ql->[1], $state);
 }
 
-sub search {
-   my $self = shift;
-   my ($query, $currentpage, $maxpage, $callback) = @_;
-
-   $currentpage ||= 1;
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
-   $self->brik_help_run_undef_arg('search', $query) or return;
-
-   my $ao = $self->build_ao;
-
-   if ($query !~ m{^\s*category\s*:\s*(\w+)\s+(.+)\s*$}i) {
-      return $self->log->error("search: please start your search with ".
-         "'category:CATEGORY'");
-   }
-
-   my $page = $ao->search($query, $apikey, $currentpage, $callback) or return;
-
-   $maxpage ||= $page->{max_page};
-   $self->log->verbose("search: maxpage is [$maxpage]");
-
-   $self->log->debug("search: page [$currentpage/$maxpage] fetched");
-
-   if ($self->autoscroll && ++$currentpage <= $maxpage) {
-      my $abort = 0;
-      $SIG{INT} = sub {
-         $abort = 1;
-      };
-      for ($currentpage..$maxpage) {
-         $self->log->verbose("search: scrolling page [$_]");
-         $ao->search($query, $apikey, $_, $callback) or return;
-         my $perc = sprintf("%.02f%%", $_ / $maxpage * 100);
-         $self->log->verbose("search: page [$_/$maxpage] fetched ($perc)...");
-         last if $abort;
-      }
-   }
-
-   return $page;
-}
-
-sub export {
+sub _export {
    my $self = shift;
    my ($query, $currentpage, $maxpage, $callback) = @_;
 
@@ -239,7 +256,7 @@ sub export {
    return 1;
 }
 
-sub bulk {
+sub _bulk {
    my $self = shift;
    my ($query, $currentpage, $maxpage, $callback) = @_;
 
@@ -261,40 +278,42 @@ sub bulk {
 
 sub pipeline {
    my $self = shift;
-   my ($pipeline, $api, $currentpage, $maxpage) = @_;
-
-   $currentpage ||= 1;
-   $self->brik_help_run_undef_arg('pipeline', $pipeline) or return;
-   $self->brik_help_run_undef_arg('pipeline', $api) or return;
+   my ($results, $opl, $state) = @_;
 
    my $sj = $self->_sj;
-   my $apikey = $self->apikey;
-   my $ao = $self->build_ao;
-   my $apiurl = $ao->apiurl;
 
-   my @cmd = split(/\s*\|\s*-?/, $pipeline);
+   # Prints on STDOUT as JSON:
+   my $callback = sub {
+      my ($results) = @_;
+
+      my $docs = $results->{results};
+      return $results if (!defined($docs) || @$docs == 0);
+
+      for my $doc (@$docs) {
+         print $sj->encode($doc)."\n";
+      }
+
+      return $results;
+   };
+
+   if (!defined($opl)) {
+      return $callback->($results);
+   }
+
+   my @cmd = split(/\s*\|\s*-?/, $opl);
    if (@cmd == 0) {
-      return $self->log->error("pipeline: no search command found");
+      return $self->log->error("pipeline: no OPL query found");
    }
 
-   # First one is hopefully a search query or a given API (like for Bulk APIs):
-   my $query = shift @cmd;
-   if ($query !~ m{^\s*(?:category|bulk)\s*:\s*(\S+)\s+(.+)\s*$}i) {
-      return $self->log->error("pipeline: please start your search ".
-         "with 'category:CATEGORY' or 'bulk:BULK_API INPUT_FILE'");
-   }
-
-   $self->log->verbose("pipeline: query[$query]");
-
-   my $last_page;
+   my $last_results;
    my $last_function;
    my $last_argument;
    my $last_state;
 
-   my $callback = sub {
-      my ($page, $state) = @_;
+   my $opl_callback = sub {
+      my ($results, $state) = @_;
 
-      if (!defined($page)) {
+      if (!defined($results)) {
          return;
       }
 
@@ -308,8 +327,7 @@ sub pipeline {
          }
 
          # Load function
-         my $module = 'Metabrik::Client::Onyphe::Function::'.
-            ucfirst(lc($function[0]));
+         my $module = 'Metabrik::Client::Onyphe::Function::'.ucfirst(lc($function[0]));
          eval("use $module;");
          if ($@) {
             chomp($@);
@@ -322,8 +340,8 @@ sub pipeline {
             return;
          }
          # So function can call main client::onyphe client
-         $function->apiurl($apiurl);
-         $function->apikey($apikey);
+         $function->apiurl($self->apiurl);
+         $function->apikey($self->apikey);
          # XXX: apiargs?
 
          my $argument = $function[1];
@@ -337,30 +355,30 @@ sub pipeline {
 
          $self->log->verbose("pipeline: function[$function]");
 
-         $page = $function->run($page, $state, $argument);
-         last if (!defined($page));
+         $results = $function->run($results, $state, $argument);
+         last if (!defined($results));
 
-         $last_page = $page;
+         $last_results = $results;
       }
 
-      if (defined($page)) {
+      if (defined($results)) {
          # Put back in line format
-         my $lines = $page->{results};
+         my $docs = $results->{results};
 
-         for (@$lines) {
-            print $sj->encode($_)."\n";
+         for my $doc (@$docs) {
+            print $sj->encode($doc)."\n";
          }
       }
 
       # May return undefined on errors.
-      return $page;
+      return $results;
    };
 
-   $self->log->verbose("api[$api]");
-   $self->$api($query, $currentpage, $maxpage, $callback);
+   # To keep state between each page of results
+   $opl_callback->($results, $state);
 
-   if (defined($last_function) && defined($last_page)) {
-      $last_function->run($last_page, $last_state, $last_argument);
+   if (defined($last_function) && defined($last_results)) {
+      $last_function->run($last_results, $last_state, $last_argument);
    }
 
    return 1;
@@ -446,6 +464,10 @@ Use Export API for queries.
 
 Perform a search or export query by using | separated list of functions.
 
+=item B<build_ao>  # XXX
+
+=item B<split_ql>  # XXX
+
 =back
 
 =head1 SEE ALSO
@@ -454,7 +476,7 @@ L<Metabrik>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2021, ONYPHE
+Copyright (c) 2018-2022, ONYPHE
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

@@ -41,8 +41,14 @@
       "Metabrik::Client::Onyphe::Function::Addcount" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Addcount.pm"
       },
+      "Metabrik::Client::Onyphe::Function::Allowlist" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Allowlist.pm"
+      },
       "Metabrik::Client::Onyphe::Function::Blacklist" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Blacklist.pm"
+      },
+      "Metabrik::Client::Onyphe::Function::Blocklist" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Blocklist.pm"
       },
       "Metabrik::Client::Onyphe::Function::Count" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Count.pm"
@@ -53,8 +59,17 @@
       "Metabrik::Client::Onyphe::Function::Exec" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Exec.pm"
       },
+      "Metabrik::Client::Onyphe::Function::Expand" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Expand.pm"
+      },
+      "Metabrik::Client::Onyphe::Function::Fields" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Fields.pm"
+      },
       "Metabrik::Client::Onyphe::Function::Httpshot" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Httpshot.pm"
+      },
+      "Metabrik::Client::Onyphe::Function::Lookup" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Lookup.pm"
       },
       "Metabrik::Client::Onyphe::Function::Merge" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Merge.pm"
@@ -67,6 +82,9 @@
       },
       "Metabrik::Client::Onyphe::Function::Search" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Search.pm"
+      },
+      "Metabrik::Client::Onyphe::Function::Splitsubnet" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Splitsubnet.pm"
       },
       "Metabrik::Client::Onyphe::Function::Top" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Top.pm"
