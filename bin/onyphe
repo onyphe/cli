@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: onyphe,v d629ccff5f0c 2018/12/03 12:59:47 gomor $
+# $Id$
 #
 use strict;
 use warnings;
