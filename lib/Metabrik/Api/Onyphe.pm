@@ -53,6 +53,8 @@ sub brik_init {
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
    $self->_sj($sj);
 
+   $self->user_agent("Metabrik::Api::Onyphe v$VERSION");
+
    return $self->SUPER::brik_init;
 }
 
@@ -70,7 +72,6 @@ sub api_standard {
       'Authorization' => "apikey $apikey",
       'Content-Type' => 'application/json',
    });
-   $self->user_agent("Metabrik::Api::Onyphe v$VERSION");
 
    if (defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
@@ -354,6 +355,7 @@ sub summary {
 }
 
 sub bulk_summary {
+
 }
 
 #
@@ -383,6 +385,14 @@ sub simple_best {
 
    return $self->api_standard("simple/$category/best", $oql, undef, $cb, $cb_arg);
 }
+
+#
+# All Bulk requests can take the following arguments
+#
+# keepalive=true
+# trackquery=true
+# size=true
+#
 
 sub bulk_simple {
    my $self = shift;

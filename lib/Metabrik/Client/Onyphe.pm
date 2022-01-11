@@ -40,7 +40,7 @@ sub brik_properties {
          state => {},
       },
       commands => {
-         connect => [ ],
+         ao => [ ],
          pipeline => [ qw(results state OPL|OPTIONAL) ],
          user => [ qw(OPL|OPTIONAL) ],
          search => [ qw(QL) ],
@@ -61,7 +61,8 @@ sub brik_init {
    my $self = shift;
 
    my $ao = Metabrik::Api::Onyphe->new_from_brik_init($self) or return;
-   $ao->user_agent("Metabrik::Client::Onyphe v$VERSION");
+   $ao->brik_init;
+   $ao->user_agent("Metabrik::Client::Onyphe v$VERSION");  # Overwrite default value from $ao
    $self->_ao($ao);
 
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
@@ -77,7 +78,7 @@ sub brik_init {
    return $self->SUPER::brik_init;
 }
 
-sub connect {
+sub ao {
    my $self = shift;
 
    my $apiurl = $self->apiurl;
@@ -112,7 +113,7 @@ sub user {
 
    $ql = $self->split_ql($ql);
 
-   return $self->connect->user($self->callback, $ql->[0]);
+   return $self->ao->user($self->callback, $ql->[0]);
 }
 
 #
@@ -131,8 +132,13 @@ sub search {
 
    $ql = $self->split_ql($ql);
 
+   my $apiargs = [];
+   push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+   push @$apiargs, { size => $self->apisize } if $self->apisize;
+
    for my $page (1..$maxpage) {
-      $self->connect->search($ql->[0], [{ page => $page }], $self->callback, $ql->[1]);
+      $self->ao->search(
+         $ql->[0], [ { page => $page }, @$apiargs ], $self->callback, $ql->[1]);
    }
 
    return 1;
@@ -153,11 +159,11 @@ sub export {
    $ql = $self->split_ql($ql);
 
    my $apiargs = [];
-   #push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;  # XXX: supported?
-   #push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;  # XXX: supported?
+   #push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;  # Not supported
+   #push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;  # Not supported
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
-   return $self->connect->export($ql->[0], $apiargs, $self->callback, $ql->[1]);
+   return $self->ao->export($ql->[0], $apiargs, $self->callback, $ql->[1]);
 }
 
 #
@@ -172,7 +178,7 @@ sub simple {
 
    $ql = $self->split_ql($ql);
 
-   return $self->connect->simple($ql->[0], $category, $self->callback, $ql->[1]);
+   return $self->ao->simple($ql->[0], $category, $self->callback, $ql->[1]);
 }
 
 #
@@ -185,7 +191,7 @@ sub summary {
 
    $ql = $self->split_ql($ql);
 
-   return $self->connect->summary($ql->[0], $type, $self->callback, $ql->[1]);
+   return $self->ao->summary($ql->[0], $type, $self->callback, $ql->[1]);
 }
 
 sub pipeline {
@@ -375,7 +381,7 @@ Perform a search or export query by using | separated list of functions.
 
 =item B<split_ql>  # XXX
 
-=item B<connect>  # XXX
+=item B<ao>  # XXX
 
 =back
 
