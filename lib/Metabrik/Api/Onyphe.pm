@@ -7,6 +7,8 @@ package Metabrik::Api::Onyphe;
 use strict;
 use warnings;
 
+our $VERSION = '3.00';
+
 use base qw(Metabrik::Client::Rest);
 
 sub brik_properties {
@@ -18,7 +20,6 @@ sub brik_properties {
       attributes => {
          apiurl => [ qw(url) ],
          apikey => [ qw(key) ],
-         apiargs => [ qw(args) ],
          wait => [ qw(seconds) ],
          _sj => [ qw(INTERNAL) ],
       },
@@ -29,11 +30,12 @@ sub brik_properties {
       commands => {
         api_standard => [ qw(api oql|OPTIONAL page|OPTIONAL) ],
         api_streaming => [ qw(api oql) ],
-        user => [ ],
-        search => [ qw(OQL) ],
-        export => [ qw(OQL callback) ],
-        simple => [ qw(OQL category) ],
-        summary => [ qw(OQL ip|domain|hostname) ],
+        user => [ qw(cb|OPTIONAL cb_arg|OPTIONAL) ],
+        search => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+        summary => [ qw(OQL ip|domain|hostname|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+        simple => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+        simple_best => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+        export => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
       },
       require_modules => {
          'Metabrik::String::Json' => [ ],
@@ -56,20 +58,19 @@ sub brik_init {
 
 sub api_standard {
    my $self = shift;
-   my ($api, $oql, $page, $cb, $cb_arg) = @_;
+   my ($api, $oql, $apiargs, $cb, $cb_arg) = @_;
 
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('api_standard', $api) or return;
 
    my $wait = $self->wait;
-
    my $apiurl = $self->apiurl;
-   my $apiargs = $self->apiargs;
+   my $apikey = $self->apikey;
+
    $self->add_headers({
       'Authorization' => "apikey $apikey",
       'Content-Type' => 'application/json',
    });
+   $self->user_agent("Metabrik::Api::Onyphe v$VERSION");
 
    if (defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
@@ -77,22 +78,18 @@ sub api_standard {
    }
 
    my $url = $apiurl.'/'.$api;
-   if (defined($oql)) {
-      $url .= '/'.$oql;
-   }
+   $url .= '/'.$oql if defined($oql);
    if (defined($apiargs)) {
-      $url .= $apiargs;
-   }
-   if (defined($page)) {
-      if (!defined($apiargs)) {
-         $url .= '?page='.$page;
+      my @args = ();
+      for my $arg (@$apiargs) {
+         for my $k (sort { $a cmp $b } keys %$arg) {
+            push @args, $k.'='.$arg->{$k};
+         }
       }
-      else {
-         $url .= '&page='.$page;
-      }
+      $url .= '?'.join('&', @args);
    }
 
-   $self->log->verbose("api_standard: using url[$apiurl]");
+   $self->log->verbose("api_standard: using url[$url]");
 
    my $abort = 0;
    $SIG{INT} = sub {
@@ -136,15 +133,14 @@ sub api_standard {
 
 sub api_streaming {
    my $self = shift;
-   my ($api, $oql, $cb, $cb_arg) = @_;
+   my ($api, $oql, $apiargs, $cb, $cb_arg) = @_;
 
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
    $self->brik_help_run_undef_arg('api_streaming', $api) or return;
+   $self->brik_help_run_undef_arg('api_streaming', $oql) or return;
 
    my $sj = $self->_sj;
    my $apiurl = $self->apiurl;
-   my $apiargs = $self->apiargs;
+   my $apikey = $self->apikey;
 
    if (defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
@@ -153,10 +149,16 @@ sub api_streaming {
 
    my $url = "$apiurl/$api/$oql";
    if (defined($apiargs)) {
-      $url .= $apiargs;
+      my @args = ();
+      for my $arg (@$apiargs) {
+         for my $k (sort { $a cmp $b } keys %$arg) {
+            push @args, $k.'='.$arg->{$k};
+         }
+      }
+      $url .= '?'.join('&', @args);
    }
 
-   $self->log->verbose("api_streaming: using url[$apiurl]");
+   $self->log->verbose("api_streaming: using url[$url]");
 
    # Abort on Ctrl+C
    my $abort = 0;
@@ -275,33 +277,36 @@ sub api_streaming {
 
 sub callback {
    my $self = shift;
-   my ($results) = @_;
 
-   $self->brik_help_run_undef_arg("callback", $results) or return;
+   return sub {
+      my ($results) = @_;
 
-   my $sj = $self->_sj;
+      return unless defined($results);
 
-   # Paged result mode:
-   my $docs;
-   if (exists($results->{results})) {
-      $docs = $results->{results};
-   }
-   # Streamed result mode:
-   else {
-      $docs = $results;
-   }
+      my $sj = $self->_sj;
 
-   for my $doc (@$docs) {
-      my $this = $sj->encode($doc);
-      if (!defined($this)) {
-         $self->log->error("callback: unable to encode [$doc]");
-         next;
+      # Paged result mode:
+      my $docs;
+      if (exists($results->{results})) {
+         $docs = $results->{results};
       }
-      next if (! $this->{'@category'} || $this->{'@category'} eq 'none');
-      print "$this\n";
-   }
+      # Streamed result mode:
+      else {
+         $docs = $results;
+      }
 
-   return $docs;
+      for my $doc (@$docs) {
+         my $this = $sj->encode($doc);
+         if (!defined($this)) {
+            $self->log->error("callback: unable to encode [$doc]");
+            next;
+         }
+         next if (! $doc->{'@category'} || $doc->{'@category'} eq 'none');
+         print "$this\n";
+      }
+
+      return $docs;
+   };
 }
 
 #
@@ -322,14 +327,14 @@ sub user {
 #
 sub search {
    my $self = shift;
-   my ($oql, $page, $cb, $cb_arg) = @_;
+   my ($oql, $apiargs, $cb, $cb_arg) = @_;
 
    $self->brik_help_run_undef_arg("search", $oql) or return;
 
-   $page ||= 1;
+   $apiargs ||= { page => 1 };
    $cb ||= $self->callback;
 
-   return $self->api_standard('search', $oql, $page, $cb, $cb_arg);
+   return $self->api_standard('search', $oql, $apiargs, $cb, $cb_arg);
 }
 
 #
@@ -411,13 +416,13 @@ sub alert {
 #
 sub export {
    my $self = shift;
-   my ($oql, $cb, $cb_arg) = @_;
+   my ($oql, $apiargs, $cb, $cb_arg) = @_;
 
    $self->brik_help_run_undef_arg("export", $oql) or return;
 
    $cb ||= $self->callback;
 
-   return $self->api_streaming('export', $oql, $cb, $cb_arg);
+   return $self->api_streaming('export', $oql, $apiargs, $cb, $cb_arg);
 }
 
 1;

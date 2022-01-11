@@ -17,8 +17,7 @@ my %lopts = (
    # General options:
    verbose => 1,
    onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
-   autoscroll => 0,
-   maxpage => 1000,
+   maxpage => 1,
    apiurl => 'https://www.onyphe.io/api/v2',
    apisize => 10,
    apitrackquery => 0,
@@ -39,7 +38,6 @@ my %lopts = (
 GetOptions(
    # General options:
    "verbose=i" => \$lopts{verbose},             # -verbose 1
-   "autoscroll=i" => \$lopts{autoscroll},       # -autoscroll 1
    "maxpage=i" => \$lopts{maxpage},             # -maxpage 10
    "apiurl=s" => \$lopts{apiurl},               # -apiurl https://beta.onyphe.io/api/v2
    "apikey=s" => \$lopts{apikey},               # -apikey YOUR_APIKEY
@@ -80,7 +78,8 @@ $cli->brik_init;
 $cli->log->level($lopts{verbose});
 
 # Set general options:
-$cli->autoscroll($lopts{autoscroll});
+$lopts{maxpage} = (defined($lopts{maxpage}) && $lopts{maxpage} > 1000)
+   ? 1000 : $lopts{maxpage};
 $cli->maxpage($lopts{maxpage});
 $cli->apiurl($lopts{apiurl});
 $cli->apikey($lopts{apikey});
@@ -141,9 +140,7 @@ Usage: onyphe [options] -search -category datascan 'OQL | PQL'
 General options:
 
    -verbose <0|1|2|3>                      verbosity level (default: 1)
-   -autoscroll <0|1>                       use autoscroll feature (default: 0)
-                                           WARNING: may consume a lot of credit
-   -maxpage <MAXPAGE>                      max page to fetch when autoscroll (default: 1000)
+   -maxpage <MAXPAGE>                      max page to fetch (default: 1)
    -wait <SECONDS>                         wait time in regards to rate limit (default: 1)
    -apiurl <URL>                           use another URL endpoint for API calls
    -apikey <APIKEY>                        your personal ONYPHE API key

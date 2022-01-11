@@ -19,13 +19,12 @@ sub brik_properties {
          callback => [ qw(callback) ],
          state => [ qw(state) ],
          # General options:
-         autoscroll => [ qw(0|1) ],
          maxpage => [ qw(value) ],
          apiurl => [ qw(apiurl) ],
          apikey => [ qw(apikey) ],
          apisize => [ qw(apisize) ],
-         apitrackquery => [ qw(apitrackquery) ],
-         apikeepalive => [ qw(true) ],
+         apitrackquery => [ qw(0|1) ],
+         apikeepalive => [ qw(0|1) ],
          wait => [ qw(seconds) ],
          # API options:
          category => [ qw(category|categories) ],
@@ -36,12 +35,12 @@ sub brik_properties {
       },
       attributes_default => {
          apiurl => 'https://www.onyphe.io/api/v2',
-         autoscroll => 0,
+         maxpage => 1,
          wait => 1,
          state => {},
       },
       commands => {
-         build_ao => [ ],
+         connect => [ ],
          pipeline => [ qw(results state OPL|OPTIONAL) ],
          user => [ qw(OPL|OPTIONAL) ],
          search => [ qw(QL) ],
@@ -78,42 +77,16 @@ sub brik_init {
    return $self->SUPER::brik_init;
 }
 
-# XXX: move to connect() in api::onyphe
-sub build_ao {
+sub connect {
    my $self = shift;
 
-   my $ao = $self->_ao;
    my $apiurl = $self->apiurl;
    my $apikey = $self->apikey;
-   my $apisize = $self->apisize;
-   my $apikeepalive = $self->apikeepalive;
-   my $apitrackquery = $self->apitrackquery;
 
-   my @args = ();
-   if (defined($apisize)) {
-      push @args, 'size='.$apisize;
-   }
-   if (defined($apitrackquery) && $apitrackquery) {
-      push @args, 'trackquery=true';
-   }
-   if (defined($apikeepalive) && $apikeepalive) {
-      push @args, 'keepalive=true';
-   }
+   $self->_ao->apiurl($apiurl);
+   $self->_ao->apikey($apikey);
 
-   my $apiargs;
-   if (@args) {
-      $apiargs = '?'.join('&', @args);
-   }
-
-   $ao->apiurl($apiurl);
-   $ao->apikey($apikey);
-   $ao->apiargs($apiargs);
-
-   if (defined($apiargs)) {
-      $self->log->verbose("client::onyphe: build_ao: args[$apiargs]");
-   }
-
-   return $ao;
+   return $self->_ao;
 }
 
 sub split_ql {
@@ -124,7 +97,7 @@ sub split_ql {
 
    my ($oql, $opl) = split(/\s*\|\s*/, $ql, 2);
 
-   $self->log->info("split_ql: ql[$ql] oql[$oql] opl[$opl]");
+   #$self->log->info("split_ql: ql[$ql] oql[$oql] opl[$opl]");
 
    return [ $oql, $opl ];
 }
@@ -137,11 +110,9 @@ sub user {
    my $self = shift;
    my ($ql) = @_;
 
-   my $ao = $self->build_ao;
-
    $ql = $self->split_ql($ql);
 
-   return $ao->user($self->callback, $ql->[0]);
+   return $self->connect->user($self->callback, $ql->[0]);
 }
 
 #
@@ -152,21 +123,16 @@ sub search {
    my $self = shift;
    my ($ql) = @_;
 
-   my $ao = $self->build_ao;
    my $category = $self->category;
 
    $ql = "category:$category $ql";
 
-   my $autoscroll = $self->autoscroll;
-   my $maxpage = 1;
-   if ($autoscroll) {
-      $maxpage = $self->maxpage;
-   }
+   my $maxpage = $self->maxpage;
 
    $ql = $self->split_ql($ql);
 
    for my $page (1..$maxpage) {
-      $ao->search($ql->[0], $page, $self->callback, $ql->[1]);
+      $self->connect->search($ql->[0], [{ page => $page }], $self->callback, $ql->[1]);
    }
 
    return 1;
@@ -180,14 +146,18 @@ sub export {
    my $self = shift;
    my ($ql) = @_;
 
-   my $ao = $self->build_ao;
    my $category = $self->category;
 
    $ql = "category:$category $ql";
 
    $ql = $self->split_ql($ql);
 
-   return $ao->export($ql->[0], $self->callback, $ql->[1]);
+   my $apiargs = [];
+   #push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;  # XXX: supported?
+   #push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;  # XXX: supported?
+   push @$apiargs, { size => $self->apisize } if $self->apisize;
+
+   return $self->connect->export($ql->[0], $apiargs, $self->callback, $ql->[1]);
 }
 
 #
@@ -198,12 +168,11 @@ sub simple {
    my $self = shift;
    my ($ql) = @_;
 
-   my $ao = $self->build_ao;
    my $category = $self->category;
 
    $ql = $self->split_ql($ql);
 
-   return $ao->simple($ql->[0], $category, $self->callback, $ql->[1]);
+   return $self->connect->simple($ql->[0], $category, $self->callback, $ql->[1]);
 }
 
 #
@@ -214,11 +183,9 @@ sub summary {
    my $self = shift;
    my ($ql, $type) = @_;
 
-   my $ao = $self->build_ao;
-
    $ql = $self->split_ql($ql);
 
-   return $ao->summary($ql->[0], $type, $self->callback, $ql->[1]);
+   return $self->connect->summary($ql->[0], $type, $self->callback, $ql->[1]);
 }
 
 sub pipeline {
@@ -343,7 +310,6 @@ Metabrik::Client::Onyphe - official client for ONYPHE API access
 
    my $cli = Metabrik::Client::Onyphe->new_brik_init;
    $cli->apikey(<APIKEY>);
-   $cli->autoscroll(<0|1>);
 
    # Search first page of results only
    $cli->search('category:datascan port:80');
@@ -351,12 +317,8 @@ Metabrik::Client::Onyphe - official client for ONYPHE API access
    # Search given page of results
    $cli->search('category:datascan port:80', 10);
 
-   # Search from page 10 to page 20 when autoscroll is active
-   $cli->autoscroll(1);
    $cli->search('category:datascan port:80', 10, 20);
 
-   # Fetch all pages when autoscroll is active
-   $cli->autoscroll(1);
    $cli->export('category:datascan protocol:http');
 
    # Search using the simple API
@@ -412,6 +374,8 @@ Perform a search or export query by using | separated list of functions.
 =item B<build_ao>  # XXX
 
 =item B<split_ql>  # XXX
+
+=item B<connect>  # XXX
 
 =back
 
