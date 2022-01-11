@@ -56,7 +56,7 @@ sub brik_init {
 
 sub api_standard {
    my $self = shift;
-   my ($api, $oql, $page) = @_;
+   my ($api, $oql, $page, $cb, $cb_arg) = @_;
 
    my $apikey = $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
@@ -131,12 +131,12 @@ sub api_standard {
       return;
    }
 
-   return $results;
+   return $cb->($results, $cb_arg);
 }
 
 sub api_streaming {
    my $self = shift;
-   my ($api, $oql, $callback) = @_;
+   my ($api, $oql, $cb, $cb_arg) = @_;
 
    my $apikey = $self->apikey;
    $self->brik_help_set_undef_arg('apikey', $apikey) or return;
@@ -219,7 +219,7 @@ sub api_streaming {
             }
 
             if ($results->{results} && @{$results->{results}}) {
-               my $r = $callback->($results);
+               my $r = $cb->($results, $cb_arg);
                if (! defined($r)) {
                   return $cv->send;
                }
@@ -262,7 +262,7 @@ sub api_streaming {
                next if (! $decode->{'@category'} || $decode->{'@category'} eq 'none');
                push @{$results->{results}}, $decode;
             }
-            $callback->($results) if ($results->{results} && @{$results->{results}});
+            $cb->($results, $cb_arg) if ($results->{results} && @{$results->{results}});
          }
 
          return $cv->send;
@@ -273,67 +273,134 @@ sub api_streaming {
    return $cv->recv;
 }
 
+sub callback {
+   my $self = shift;
+   my ($results) = @_;
+
+   $self->brik_help_run_undef_arg("callback", $results) or return;
+
+   my $sj = $self->_sj;
+
+   # Paged result mode:
+   my $docs;
+   if (exists($results->{results})) {
+      $docs = $results->{results};
+   }
+   # Streamed result mode:
+   else {
+      $docs = $results;
+   }
+
+   for my $doc (@$docs) {
+      my $this = $sj->encode($doc);
+      if (!defined($this)) {
+         $self->log->error("callback: unable to encode [$doc]");
+         next;
+      }
+      next if (! $this->{'@category'} || $this->{'@category'} eq 'none');
+      print "$this\n";
+   }
+
+   return $docs;
+}
+
 #
 # $self->user();
 #
 sub user {
    my $self = shift;
+   my ($cb, $cb_arg) = @_;
 
-   return $self->api_standard('user');
+   $cb ||= $self->callback;
+
+   return $self->api_standard('user', undef, undef, $cb, $cb_arg);
 }
 
 #
 # $self->search("category:datascan product:nginx");
+# $self->search("category:datascan product:nginx", 10);
 #
 sub search {
    my $self = shift;
-   my ($oql) = @_;
+   my ($oql, $page, $cb, $cb_arg) = @_;
 
-   return $self->api_standard('search', $oql);
+   $self->brik_help_run_undef_arg("search", $oql) or return;
+
+   $page ||= 1;
+   $cb ||= $self->callback;
+
+   return $self->api_standard('search', $oql, $page, $cb, $cb_arg);
 }
 
 #
+# $self->summary("1.1.1.1");
 # $self->summary("1.1.1.1", "ip");
 #
 sub summary {
    my $self = shift;
-   my ($oql, $type) = @_;
+   my ($oql, $type, $cb, $cb_arg) = @_;
 
-   return $self->api_standard("summary/$type", $oql);
+   $self->brik_help_run_undef_arg("summary", $oql) or return;
+
+   $type ||= "ip";
+   $cb ||= $self->callback;
+
+   return $self->api_standard("summary/$type", $oql, undef, $cb, $cb_arg);
 }
 
 sub bulk_summary {
 }
 
 #
+# $self->simple("1.1.1.1");
 # $self->simple("1.1.1.1", "resolver");
 #
 sub simple {
    my $self = shift;
-   my ($oql, $category) = @_;
+   my ($oql, $category, $cb, $cb_arg) = @_;
 
-   return $self->api_standard("simple/$category", $oql);
+   $self->brik_help_run_undef_arg("simple", $oql) or return;
+
+   $category ||= "datascan";
+   $cb ||= $self->callback;
+
+   return $self->api_standard("simple/$category", $oql, undef, $cb, $cb_arg);
 }
 
 sub simple_best {
    my $self = shift;
-   my ($oql, $category) = @_;
+   my ($oql, $category, $cb, $cb_arg) = @_;
 
-   return $self->api_standard("simple/$category/best", $oql);
+   $self->brik_help_run_undef_arg("simple_best", $oql) or return;
+
+   $category ||= "datascan";
+   $cb ||= $self->callback;
+
+   return $self->api_standard("simple/$category/best", $oql, undef, $cb, $cb_arg);
 }
 
 sub bulk_simple {
    my $self = shift;
-   my ($oql, $category, $callback) = @_;
+   my ($oql, $category, $cb, $cb_arg) = @_;
 
-   return $self->api_streaming("bulk/simple/$category/ip", $oql, $callback);
+   $self->brik_help_run_undef_arg("bulk_simple", $oql) or return;
+
+   $category ||= "datascan";
+   $cb ||= $self->callback;
+
+   return $self->api_streaming("bulk/simple/$category/ip", $oql, undef, $cb, $cb_arg);
 }
 
 sub bulk_simple_best {
    my $self = shift;
-   my ($oql, $category, $callback) = @_;
+   my ($oql, $category, $cb, $cb_arg) = @_;
 
-   return $self->api_streaming("bulk/simple/$category/best/ip", $oql, $callback);
+   $self->brik_help_run_undef_arg("bulk_simple_best", $oql) or return;
+
+   $category ||= "datascan";
+   $cb ||= $self->callback;
+
+   return $self->api_streaming("bulk/simple/$category/best/ip", $oql, undef, $cb, $cb_arg);
 }
 
 sub alert {
@@ -344,9 +411,13 @@ sub alert {
 #
 sub export {
    my $self = shift;
-   my ($oql, $callback) = @_;
+   my ($oql, $cb, $cb_arg) = @_;
 
-   return $self->api_streaming('export', $oql, $callback);
+   $self->brik_help_run_undef_arg("export", $oql) or return;
+
+   $cb ||= $self->callback;
+
+   return $self->api_streaming('export', $oql, $cb, $cb_arg);
 }
 
 1;

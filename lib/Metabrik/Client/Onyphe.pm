@@ -16,6 +16,8 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       attributes => {
+         callback => [ qw(callback) ],
+         state => [ qw(state) ],
          # General options:
          autoscroll => [ qw(0|1) ],
          maxpage => [ qw(value) ],
@@ -36,6 +38,7 @@ sub brik_properties {
          apiurl => 'https://www.onyphe.io/api/v2',
          autoscroll => 0,
          wait => 1,
+         state => {},
       },
       commands => {
          build_ao => [ ],
@@ -65,9 +68,17 @@ sub brik_init {
    my $sj = Metabrik::String::Json->new_from_brik_init($self) or return;
    $self->_sj($sj);
 
+   my $cb = sub {
+      my ($results, $opl) = @_;
+      my $state = $self->state;
+      return $self->pipeline($results, $opl, $state);
+   };
+   $self->callback($cb);
+
    return $self->SUPER::brik_init;
 }
 
+# XXX: move to connect() in api::onyphe
 sub build_ao {
    my $self = shift;
 
@@ -109,9 +120,11 @@ sub split_ql {
    my $self = shift;
    my ($ql) = @_;
 
+   return [] unless defined($ql);
+
    my ($oql, $opl) = split(/\s*\|\s*/, $ql, 2);
 
-   #$self->log->debug("split_ql: ql[$ql] oql[$oql] opl[$opl]");
+   $self->log->info("split_ql: ql[$ql] oql[$oql] opl[$opl]");
 
    return [ $oql, $opl ];
 }
@@ -128,11 +141,7 @@ sub user {
 
    $ql = $self->split_ql($ql);
 
-   # To keep state between each page of results:
-   my $state = {};
-
-   my $results = $ao->user();
-   return $self->pipeline($results, $ql->[0], $state);
+   return $ao->user($self->callback, $ql->[0]);
 }
 
 #
@@ -156,12 +165,8 @@ sub search {
 
    $ql = $self->split_ql($ql);
 
-   # To keep state between each page of results:
-   my $state = {};
-
    for my $page (1..$maxpage) {
-      my $results = $ao->search($ql->[0]);
-      $self->pipeline($results, $ql->[1], $state);
+      $ao->search($ql->[0], $page, $self->callback, $ql->[1]);
    }
 
    return 1;
@@ -182,17 +187,7 @@ sub export {
 
    $ql = $self->split_ql($ql);
 
-   # To keep state between each page of results:
-   my $state = {};
-
-   # XXX: move to global and all APIs use that callback all times (even those not streamed):
-   my $callback = sub {
-      my ($results) = @_;
-
-      $self->pipeline($results, $ql->[1], $state);
-   };
-
-   return $ao->export($ql->[0], $callback);
+   return $ao->export($ql->[0], $self->callback, $ql->[1]);
 }
 
 #
@@ -208,12 +203,7 @@ sub simple {
 
    $ql = $self->split_ql($ql);
 
-   my $results = $ao->simple($ql->[0], $category);
-
-   # To keep state between each page of results:
-   my $state = {};
-
-   return $self->pipeline($results, $ql->[1], $state);
+   return $ao->simple($ql->[0], $category, $self->callback, $ql->[1]);
 }
 
 #
@@ -228,52 +218,7 @@ sub summary {
 
    $ql = $self->split_ql($ql);
 
-   my $results = $ao->summary($ql->[0], $type);
-
-   # To keep state between each page of results:
-   my $state = {};
-
-   return $self->pipeline($results, $ql->[1], $state);
-}
-
-sub _export {
-   my $self = shift;
-   my ($query, $currentpage, $maxpage, $callback) = @_;
-
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
-   $self->brik_help_run_undef_arg('export', $query) or return;
-
-   my $ao = $self->build_ao;
-
-   if ($query !~ m{^\s*category\s*:\s*(\S+)\s+(.+)\s*$}i) {
-      return $self->log->error("export: please start your search with ".
-         "'category:CATEGORY'");
-   }
-
-   $ao->export($query, $apikey, $currentpage, $callback) or return;
-
-   return 1;
-}
-
-sub _bulk {
-   my $self = shift;
-   my ($query, $currentpage, $maxpage, $callback) = @_;
-
-   my $apikey = $self->apikey;
-   $self->brik_help_set_undef_arg('apikey', $apikey) or return;
-   $self->brik_help_run_undef_arg('bulk', $query) or return;
-
-   my $ao = $self->build_ao;
-
-   if ($query !~ m{^\s*bulk\s*:\s*(\S+)\s+(\S+)(.+)\s*$}i) {
-      return $self->log->error("bulk: please start your search with ".
-         "'bulk:BULK_API INPUT_FILE'");
-   }
-
-   $ao->bulk($query, $apikey, $currentpage, $callback) or return;
-
-   return 1;
+   return $ao->summary($ql->[0], $type, $self->callback, $ql->[1]);
 }
 
 sub pipeline {
@@ -283,7 +228,7 @@ sub pipeline {
    my $sj = $self->_sj;
 
    # Prints on STDOUT as JSON:
-   my $callback = sub {
+   my $cb = sub {
       my ($results) = @_;
 
       my $docs = $results->{results};
@@ -297,7 +242,7 @@ sub pipeline {
    };
 
    if (!defined($opl)) {
-      return $callback->($results);
+      return $cb->($results);
    }
 
    my @cmd = split(/\s*\|\s*-?/, $opl);
@@ -310,7 +255,7 @@ sub pipeline {
    my $last_argument;
    my $last_state;
 
-   my $opl_callback = sub {
+   my $opl_cb = sub {
       my ($results, $state) = @_;
 
       if (!defined($results)) {
@@ -375,7 +320,7 @@ sub pipeline {
    };
 
    # To keep state between each page of results
-   $opl_callback->($results, $state);
+   $opl_cb->($results, $state);
 
    if (defined($last_function) && defined($last_results)) {
       $last_function->run($last_results, $last_state, $last_argument);
