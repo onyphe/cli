@@ -398,6 +398,7 @@ sub bulk_summary {
 
    $self->brik_help_run_undef_arg("bulk_summary", $type) or return;
    $self->brik_help_run_undef_arg("bulk_summary", $input) or return;
+   $self->brik_help_run_file_not_found("bulk_summary", $input) or return;
 
    $cb ||= $self->callback;
 
@@ -453,6 +454,7 @@ sub bulk_simple {
    my ($input, $category, $apiargs, $cb, $cb_arg) = @_;
 
    $self->brik_help_run_undef_arg("bulk_simple", $input) or return;
+   $self->brik_help_run_file_not_found("bulk_simple", $input) or return;
 
    $category ||= "datascan";
    $cb ||= $self->callback;
@@ -472,6 +474,7 @@ sub bulk_simple_best {
    my ($input, $category, $apiargs, $cb, $cb_arg) = @_;
 
    $self->brik_help_run_undef_arg("bulk_simple_best", $input) or return;
+   $self->brik_help_run_file_not_found("bulk_simple_best", $input) or return;
 
    $category ||= "geoloc";
    $cb ||= $self->callback;
@@ -480,7 +483,27 @@ sub bulk_simple_best {
    my $body = $ft->read($input) or return;
 
    return $self->api_streaming(
-      "POST", "bulk/simple/$category/best/ip", $body, undef, $cb, $cb_arg);
+      "POST", "bulk/simple/$category/best/ip", $body, $apiargs, $cb, $cb_arg);
+}
+
+#
+# $self->bulk_discovery("input.txt", "resolver");
+#
+sub bulk_discovery {
+   my $self = shift;
+   my ($input, $category, $apiargs, $cb, $cb_arg) = @_;
+
+   $self->brik_help_run_undef_arg("bulk_simple_best", $input) or return;
+   $self->brik_help_run_file_not_found("bulk_simple_best", $input) or return;
+
+   $category ||= "datascan";
+   $cb ||= $self->callback;
+
+   my $ft = Metabrik::File::Text->new_from_brik_init($self) or return;
+   my $body = $ft->read($input) or return;
+
+   return $self->api_streaming(
+      "POST", "bulk/discovery/$category/asset", $body, $apiargs, $cb, $cb_arg);
 }
 
 #

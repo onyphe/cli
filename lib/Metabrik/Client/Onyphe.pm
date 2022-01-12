@@ -47,6 +47,7 @@ sub brik_properties {
          export => [ qw(QL) ],
          simple => [ qw(QL) ],
          summary => [ qw(type QL) ],
+         discovery => [ qw(QL) ],
          alert => [ qw(type QL|OPTIONAL name|OPTIONAL email|OPTIONAL threshold|OPTIONAL) ],
       },
       require_modules => {
@@ -220,6 +221,24 @@ sub summary {
    }
 
    return $self->ao->summary($oql, $type, $self->callback, $opl);
+}
+
+sub discovery {
+   my $self = shift;
+   my ($ql) = @_;
+
+   $self->brik_help_run_undef_arg("discovery", $ql) or return;
+
+   my $category = $self->category;
+
+   my ($oql, $opl) = $self->split_ql($ql);
+
+   my $apiargs = [];
+   push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
+   push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+   push @$apiargs, { size => $self->apisize } if $self->apisize;
+
+   return $self->ao->bulk_discovery($oql, $category, $apiargs, $self->callback, $opl);
 }
 
 #
@@ -447,6 +466,8 @@ Perform a search or export query by using | separated list of functions.
 =item B<ao>  # XXX
 
 =item B<alert>  # XXX
+
+=item B<discovery>  # XXX
 
 =back
 

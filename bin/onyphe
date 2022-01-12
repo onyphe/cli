@@ -47,12 +47,13 @@ GetOptions(
    "bulk" => \$lopts{bulk},            # -bulk
    "best" => \$lopts{best},            # -best
    # APIs:
-   "user" => \$lopts{user},            # -user
-   "simple" => \$lopts{simple},        # -simple
-   "summary=s" => \$lopts{summary},    # -summary ip, -summary domain, -summary hostname
-   "search" => \$lopts{search},        # -search
-   "export" => \$lopts{export},        # -export
-   "alert=s" => \$lopts{alert},        # -alert list
+   "user" => \$lopts{user},               # -user
+   "simple" => \$lopts{simple},           # -simple
+   "summary=s" => \$lopts{summary},       # -summary ip, -summary domain, -summary hostname
+   "search" => \$lopts{search},           # -search
+   "export" => \$lopts{export},           # -export
+   "discovery" => \$lopts{discovery},     # -discovery
+   "alert=s" => \$lopts{alert},           # -alert list
    "alertname=s" => \$lopts{alertname},   # -alertname "New alert"
    "alertemail=s" => \$lopts{alertemail}, # -alertemail example@example.com
    "alertthreshold=s" => \$lopts{alertthreshold}, # -alertthreshold '>0'
@@ -103,6 +104,9 @@ elsif ($lopts{simple}) {
 }
 elsif ($lopts{summary}) {
    $cli->summary($lopts{summary}, $arg) or $cli->log->fatal("summary: aborted");
+}
+elsif ($lopts{discovery}) {
+   $cli->discovery($arg) or $cli->log->fatal("discovery: aborted");
 }
 elsif ($lopts{alert}) {
    $cli->alert($lopts{alert}, $arg, $lopts{alertname}, $lopts{alertemail},
