@@ -15,6 +15,7 @@ name: Metabrik-Client-Onyphe
 provides:
   Metabrik::Api::Onyphe:
     file: lib/Metabrik/Api/Onyphe.pm
+    version: '3.00'
   Metabrik::Client::Onyphe:
     file: lib/Metabrik/Client/Onyphe.pm
     version: '3.00'
@@ -36,6 +37,8 @@ provides:
     file: lib/Metabrik/Client/Onyphe/Function/Exec.pm
   Metabrik::Client::Onyphe::Function::Expand:
     file: lib/Metabrik/Client/Onyphe/Function/Expand.pm
+  Metabrik::Client::Onyphe::Function::Export:
+    file: lib/Metabrik/Client/Onyphe/Function/Export.pm
   Metabrik::Client::Onyphe::Function::Fields:
     file: lib/Metabrik/Client/Onyphe/Function/Fields.pm
   Metabrik::Client::Onyphe::Function::Httpshot:
