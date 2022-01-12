@@ -10,6 +10,7 @@ lib/Metabrik/Client/Onyphe/Function/Count.pm
 lib/Metabrik/Client/Onyphe/Function/Dedup.pm
 lib/Metabrik/Client/Onyphe/Function/Exec.pm
 lib/Metabrik/Client/Onyphe/Function/Expand.pm
+lib/Metabrik/Client/Onyphe/Function/Export.pm
 lib/Metabrik/Client/Onyphe/Function/Fields.pm
 lib/Metabrik/Client/Onyphe/Function/Httpshot.pm
 lib/Metabrik/Client/Onyphe/Function/Lookup.pm
