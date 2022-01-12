@@ -28,14 +28,23 @@ sub brik_properties {
          wait => 1,
       },
       commands => {
-        api_standard => [ qw(api oql|OPTIONAL page|OPTIONAL) ],
-        api_streaming => [ qw(api oql) ],
-        user => [ qw(cb|OPTIONAL cb_arg|OPTIONAL) ],
-        search => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-        summary => [ qw(OQL ip|domain|hostname|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-        simple => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-        simple_best => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-        export => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         api_standard => [ qw(
+            request api oql|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         api_streaming => [ qw(
+            request api oql apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         user => [ qw(cb|OPTIONAL cb_arg|OPTIONAL) ],
+         search => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         summary => [ qw(ip|domain|hostname OQL|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         simple => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         simple_best => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         export => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         alert => [ qw(list|add|del OQL|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         bulk_summary => [ qw(
+            ip|domain|hostname OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         bulk_simple => [ qw(
+            OQL category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         bulk_simple_best => [ qw(
+            OQL category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
       },
       require_modules => {
          'Metabrik::String::Json' => [ ],
@@ -60,10 +69,12 @@ sub brik_init {
 
 sub api_standard {
    my $self = shift;
-   my ($api, $oql, $apiargs, $cb, $cb_arg) = @_;
+   my ($req, $api, $oql, $apiargs, $cb, $cb_arg) = @_;
 
+   $self->brik_help_run_undef_arg('api_standard', $req) or return;
    $self->brik_help_run_undef_arg('api_standard', $api) or return;
 
+   my $sj = $self->_sj;
    my $wait = $self->wait;
    my $apiurl = $self->apiurl;
    my $apikey = $self->apikey;
@@ -73,13 +84,15 @@ sub api_standard {
       'Content-Type' => 'application/json',
    });
 
-   if (defined($oql)) {
+   if ($req eq "GET" && defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
       $self->log->debug("api_standard: uri_escape_utf8 oql[$oql]");
    }
 
    my $url = $apiurl.'/'.$api;
-   $url .= '/'.$oql if defined($oql);
+   if ($req eq "GET" && defined($oql)) {
+      $url .= '/'.$oql;
+   }
    if (defined($apiargs)) {
       my @args = ();
       for my $arg (@$apiargs) {
@@ -94,14 +107,18 @@ sub api_standard {
 
    my $abort = 0;
    $SIG{INT} = sub {
+      #print STDERR "Ctrl+C [$abort]\n";
       $abort++;
+      return 1;
    };
 
    my $results;
 
    RETRY:
 
-   my $res = $self->get($url);
+   my $res = $req eq "GET" ? $self->get($url)
+      : $self->post(defined($oql) ? $sj->encode($oql) : undef, $url);
+
    my $code = $self->code;
    if ($code == 429) {
       $self->log->warning("api_standard: request limit reached, waiting before retry");
@@ -116,6 +133,7 @@ sub api_standard {
    }
    elsif ($code == 200) {
       $results = $self->content;
+      $self->log->info("api_standard: success");
    }
    else {
       $self->log->error("api_standard: code [$code], waiting before retry");
@@ -134,21 +152,25 @@ sub api_standard {
 
 sub api_streaming {
    my $self = shift;
-   my ($api, $oql, $apiargs, $cb, $cb_arg) = @_;
+   my ($req, $api, $oql, $apiargs, $cb, $cb_arg) = @_;
 
-   $self->brik_help_run_undef_arg('api_streaming', $api) or return;
-   $self->brik_help_run_undef_arg('api_streaming', $oql) or return;
+   $self->brik_help_run_undef_arg("api_streaming", $req) or return;
+   $self->brik_help_run_undef_arg("api_streaming", $api) or return;
+   $self->brik_help_run_undef_arg("api_streaming", $oql) or return;
 
    my $sj = $self->_sj;
    my $apiurl = $self->apiurl;
    my $apikey = $self->apikey;
 
-   if (defined($oql)) {
+   if ($req eq "GET" && defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
       $self->log->debug("api_streaming: uri_escape_utf8 oql[$oql]");
    }
 
-   my $url = "$apiurl/$api/$oql";
+   my $url = "$apiurl/$api";
+   if ($req eq "GET") {
+      $url .= "/$oql";
+   }
    if (defined($apiargs)) {
       my @args = ();
       for my $arg (@$apiargs) {
@@ -174,7 +196,11 @@ sub api_streaming {
 
    my $cv = AnyEvent->condvar;
 
-   AnyEvent::HTTP::http_get($url,
+   my @args = ( $url );
+   if ($req eq "POST") {
+      push @args, $oql;
+   }
+   push @args,
       # For each loop of processing, let callback work during 5 minutes
       # before sending a timeout.
       timeout => 300,
@@ -270,10 +296,15 @@ sub api_streaming {
 
          return $cv->send;
       },
-   );
+   ;
+
+   $req eq "GET" ? AnyEvent::HTTP::http_get(@args)
+                 : AnyEvent::HTTP::http_post(@args);
 
    # Wait for termination
-   return $cv->recv;
+   $cv->recv;
+
+   return 1;
 }
 
 sub callback {
@@ -319,7 +350,7 @@ sub user {
 
    $cb ||= $self->callback;
 
-   return $self->api_standard('user', undef, undef, $cb, $cb_arg);
+   return $self->api_standard("GET", "user", undef, undef, $cb, $cb_arg);
 }
 
 #
@@ -335,27 +366,46 @@ sub search {
    $apiargs ||= { page => 1 };
    $cb ||= $self->callback;
 
-   return $self->api_standard('search', $oql, $apiargs, $cb, $cb_arg);
+   return $self->api_standard("GET", "search", $oql, $apiargs, $cb, $cb_arg);
 }
 
 #
-# $self->summary("1.1.1.1");
-# $self->summary("1.1.1.1", "ip");
+# $self->summary("ip", "1.1.1.1");
 #
 sub summary {
    my $self = shift;
-   my ($oql, $type, $cb, $cb_arg) = @_;
+   my ($type, $oql, $cb, $cb_arg) = @_;
 
+   $self->brik_help_run_undef_arg("summary", $type) or return;
    $self->brik_help_run_undef_arg("summary", $oql) or return;
 
-   $type ||= "ip";
    $cb ||= $self->callback;
 
-   return $self->api_standard("summary/$type", $oql, undef, $cb, $cb_arg);
+   return $self->api_standard("GET", "summary/$type", $oql, undef, $cb, $cb_arg);
 }
 
-sub bulk_summary {
+# keepalive=true
+# trackquery=true
+# size=true
 
+#
+# $self->bulk_summary("ip", "input.txt");
+# $self->bulk_summary("ip", "input.txt", [{ size => 100 }, { keepalive => 1 }]);
+#
+sub bulk_summary {
+   my $self = shift;
+   my ($type, $input, $apiargs, $cb, $cb_arg) = @_;
+
+   $self->brik_help_run_undef_arg("bulk_summary", $type) or return;
+   $self->brik_help_run_undef_arg("bulk_summary", $input) or return;
+
+   $cb ||= $self->callback;
+
+   my $ft = Metabrik::File::Text->new_from_brik_init($self) or return;
+   my $body = $ft->read($input) or return;
+
+   return $self->api_streaming(
+      "POST", "bulk/summary/$type", $body, $apiargs, $cb, $cb_arg);
 }
 
 #
@@ -371,7 +421,7 @@ sub simple {
    $category ||= "datascan";
    $cb ||= $self->callback;
 
-   return $self->api_standard("simple/$category", $oql, undef, $cb, $cb_arg);
+   return $self->api_standard("GET", "simple/$category", $oql, undef, $cb, $cb_arg);
 }
 
 sub simple_best {
@@ -380,10 +430,10 @@ sub simple_best {
 
    $self->brik_help_run_undef_arg("simple_best", $oql) or return;
 
-   $category ||= "datascan";
+   $category ||= "geoloc";
    $cb ||= $self->callback;
 
-   return $self->api_standard("simple/$category/best", $oql, undef, $cb, $cb_arg);
+   return $self->api_standard("GET", "simple/$category/best", $oql, undef, $cb, $cb_arg);
 }
 
 #
@@ -394,31 +444,76 @@ sub simple_best {
 # size=true
 #
 
+#
+# $self->bulk_simple("input.txt", "resolver");
+# $self->bulk_simple("input.txt", "resolver", [ { size => 100 }, { keepalive => 1 }]);
+#
 sub bulk_simple {
    my $self = shift;
-   my ($oql, $category, $cb, $cb_arg) = @_;
+   my ($input, $category, $apiargs, $cb, $cb_arg) = @_;
 
-   $self->brik_help_run_undef_arg("bulk_simple", $oql) or return;
+   $self->brik_help_run_undef_arg("bulk_simple", $input) or return;
 
    $category ||= "datascan";
    $cb ||= $self->callback;
 
-   return $self->api_streaming("bulk/simple/$category/ip", $oql, undef, $cb, $cb_arg);
+   my $ft = Metabrik::File::Text->new_from_brik_init($self) or return;
+   my $body = $ft->read($input) or return;
+
+   return $self->api_streaming(
+      "POST", "bulk/simple/$category/ip", $body, $apiargs, $cb, $cb_arg);
 }
 
+#
+# $self->bulk_simple_best("input.txt, "geoloc");
+#
 sub bulk_simple_best {
    my $self = shift;
-   my ($oql, $category, $cb, $cb_arg) = @_;
+   my ($input, $category, $apiargs, $cb, $cb_arg) = @_;
 
-   $self->brik_help_run_undef_arg("bulk_simple_best", $oql) or return;
+   $self->brik_help_run_undef_arg("bulk_simple_best", $input) or return;
 
-   $category ||= "datascan";
+   $category ||= "geoloc";
    $cb ||= $self->callback;
 
-   return $self->api_streaming("bulk/simple/$category/best/ip", $oql, undef, $cb, $cb_arg);
+   my $ft = Metabrik::File::Text->new_from_brik_init($self) or return;
+   my $body = $ft->read($input) or return;
+
+   return $self->api_streaming(
+      "POST", "bulk/simple/$category/best/ip", $body, undef, $cb, $cb_arg);
 }
 
+#
+# $self->alert("list");
+# $self->alert("add", "category:vulnscan -exists:cve domain:example.com",
+#    "Critical CVE on example.com", 'user@example.com');
+# $self->alert("add", "category:datascan protocol:vnc",
+#    "Low VNC", 'user@example.com', '<1000');
+# $self->alert("del", $id);
+#
 sub alert {
+   my $self = shift;
+   my ($type, $oql, $cb, $cb_arg) = @_;
+
+   $self->brik_help_run_undef_arg("alert", $type) or return;
+
+   $cb ||= $self->callback;
+
+   if ($type eq "list") {
+      return $self->api_standard("GET", "alert/$type", undef, undef, $cb, $cb_arg);
+   }
+   elsif ($type eq "add") {
+      return $self->api_standard("POST", "alert/$type", $oql, undef, $cb, $cb_arg);
+   }
+   elsif ($type eq "del") {
+      return $self->api_standard("POST", "alert/$type/$oql", {}, undef, $cb, $cb_arg);
+   }
+   else {
+      $self->log->error("alert: unknown type given [$type], choose between: ".
+         "list, add or del");
+   }
+
+   return 1;
 }
 
 #
@@ -432,7 +527,7 @@ sub export {
 
    $cb ||= $self->callback;
 
-   return $self->api_streaming('export', $oql, $apiargs, $cb, $cb_arg);
+   return $self->api_streaming("GET", "export", $oql, $apiargs, $cb, $cb_arg);
 }
 
 1;

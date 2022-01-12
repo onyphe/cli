@@ -45,9 +45,9 @@ sub brik_properties {
          user => [ qw(OPL|OPTIONAL) ],
          search => [ qw(QL) ],
          export => [ qw(QL) ],
-         simple => [ qw(api QL|OPTIONAL) ],
-         summary => [ qw(api QL|OPTIONAL) ],
-         alert => [ qw(api arg) ],
+         simple => [ qw(QL) ],
+         summary => [ qw(type QL) ],
+         alert => [ qw(type QL|OPTIONAL name|OPTIONAL email|OPTIONAL threshold|OPTIONAL) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
@@ -94,13 +94,13 @@ sub split_ql {
    my $self = shift;
    my ($ql) = @_;
 
-   return [] unless defined($ql);
+   return () unless defined($ql);
 
    my ($oql, $opl) = split(/\s*\|\s*/, $ql, 2);
 
    #$self->log->info("split_ql: ql[$ql] oql[$oql] opl[$opl]");
 
-   return [ $oql, $opl ];
+   return ( $oql, $opl );
 }
 
 #
@@ -111,9 +111,9 @@ sub user {
    my $self = shift;
    my ($ql) = @_;
 
-   $ql = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_ql($ql);
 
-   return $self->ao->user($self->callback, $ql->[0]);
+   return $self->ao->user($self->callback, $opl);
 }
 
 #
@@ -130,15 +130,14 @@ sub search {
 
    my $maxpage = $self->maxpage;
 
-   $ql = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_ql($ql);
 
    my $apiargs = [];
    push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
    for my $page (1..$maxpage) {
-      $self->ao->search(
-         $ql->[0], [ { page => $page }, @$apiargs ], $self->callback, $ql->[1]);
+      $self->ao->search($oql, [ { page => $page }, @$apiargs ], $self->callback, $opl);
    }
 
    return 1;
@@ -156,19 +155,20 @@ sub export {
 
    $ql = "category:$category $ql";
 
-   $ql = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_ql($ql);
 
    my $apiargs = [];
    #push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;  # Not supported
    #push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;  # Not supported
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
-   return $self->ao->export($ql->[0], $apiargs, $self->callback, $ql->[1]);
+   return $self->ao->export($oql, $apiargs, $self->callback, $opl);
 }
 
 #
 # $self->simple("1.1.1.1");
 # $self->simple("1.1.1.1 | uniq domain");
+# $self->simple("input.txt | uniq domain");
 #
 sub simple {
    my $self = shift;
@@ -176,22 +176,85 @@ sub simple {
 
    my $category = $self->category;
 
-   $ql = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_ql($ql);
 
-   return $self->ao->simple($ql->[0], $category, $self->callback, $ql->[1]);
+   if ($self->bulk) {
+      return $self->log->error("simple: Bulk mode selected but file [$oql] not found")
+         unless -f $oql;
+      my $apiargs = [];
+      push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
+      push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+      push @$apiargs, { size => $self->apisize } if $self->apisize;
+      return $self->best
+         ? $self->ao->bulk_simple($oql, $category, $apiargs, $self->callback, $opl)
+         : $self->ao->bulk_simple_best($oql, $category, $apiargs, $self->callback, $opl);
+   }
+   elsif ($self->best) {
+      return $self->ao->simple_best($oql, $category, $self->callback, $opl);
+   }
+
+   return $self->ao->simple($oql, $category, $self->callback, $opl);
 }
 
 #
-# $self->summary("1.1.1.1", "ip");
-# $self->summary("1.1.1.1 | uniq domain", "ip");
+# $self->summary("ip", "1.1.1.1");
+# $self->summary("ip", "1.1.1.1 | uniq domain");
 #
 sub summary {
    my $self = shift;
-   my ($ql, $type) = @_;
+   my ($type, $ql) = @_;
 
-   $ql = $self->split_ql($ql);
+   $self->brik_help_run_undef_arg("summary", $type) or return;
+   $self->brik_help_run_undef_arg("summary", $ql) or return;
 
-   return $self->ao->summary($ql->[0], $type, $self->callback, $ql->[1]);
+   my ($oql, $opl) = $self->split_ql($ql);
+
+   if ($self->bulk) {
+      return $self->log->error("summary: Bulk mode selected but file [$oql] not found")
+         unless -f $oql;
+      my $apiargs = [];
+      push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
+      push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+      push @$apiargs, { size => $self->apisize } if $self->apisize;
+      return $self->ao->bulk_summary($oql, $type, $apiargs, $self->callback, $opl);
+   }
+
+   return $self->ao->summary($oql, $type, $self->callback, $opl);
+}
+
+#
+# $self->alert("list");
+# $self->alert("add", "-exists:cve domain:example.com", "CVE found", 'user@example.com');
+# $self->alert("del", $id);
+#
+sub alert {
+   my $self = shift;
+   my ($type, $ql, $name, $email, $threshold) = @_;
+
+   $self->brik_help_run_undef_arg("alert", $type) or return;
+
+   my $category = $self->category;
+
+   if ($type eq "list") {
+      $self->ao->alert($type, undef, $self->callback) or return;
+   }
+   elsif ($type eq "add") {
+      $self->brik_help_run_undef_arg("alert", $ql) or return;
+      $self->brik_help_run_undef_arg("alert", $name) or return;
+      $self->brik_help_run_undef_arg("alert", $email) or return;
+      $ql = "category:$category $ql" if defined($ql);
+      $self->log->verbose("alert: adding alert [$ql]");
+      my $post = { name => $name, email => $email, query => $ql };
+      $post->{threshold} = $threshold if defined($threshold);
+      $self->ao->alert($type, $post, $self->callback) or return;
+   }
+   else {  # del
+      $self->brik_help_run_undef_arg("alert", $ql) or return;
+      $self->log->verbose("alert: deleting alert id [$ql]");
+      $self->ao->alert($type, $ql, $self->callback) or return;
+   }
+
+   return 1;
 }
 
 sub pipeline {
@@ -382,6 +445,8 @@ Perform a search or export query by using | separated list of functions.
 =item B<split_ql>  # XXX
 
 =item B<ao>  # XXX
+
+=item B<alert>  # XXX
 
 =back
 

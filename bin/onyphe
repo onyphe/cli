@@ -28,11 +28,8 @@ my %lopts = (
    bulk => 0,    # Enable Bulk API
    simple => 0,  # Use Simple API
    best => 0,    # Enable Best API
-   category => 'datascan',
+   category => 'datascan',  # Default category to query
 );
-
-#my $oql = pop @ARGV;  # Global query
-#print STDERR "OQL: [$oql]\n";
 
 # Option parsing
 GetOptions(
@@ -56,11 +53,12 @@ GetOptions(
    "search" => \$lopts{search},        # -search
    "export" => \$lopts{export},        # -export
    "alert=s" => \$lopts{alert},        # -alert list
+   "alertname=s" => \$lopts{alertname},   # -alertname "New alert"
+   "alertemail=s" => \$lopts{alertemail}, # -alertemail example@example.com
+   "alertthreshold=s" => \$lopts{alertthreshold}, # -alertthreshold '>0'
 ) or usage();
 
-my $ql = pop @ARGV;  # Global query
-#print STDERR "QL: [$ql]\n" if defined($ql);
-#print Data::Dumper::Dumper(\%lopts)."\n";
+my $arg = pop @ARGV;  # Global argument
 
 # Load API key from onyphe rc file
 load_onyphe_rc(%lopts);
@@ -95,25 +93,23 @@ $cli->best($lopts{best});
 
 # Launch query
 if ($lopts{export}) {
-   #$cli->pipeline($lopts{export}, 'export') or $cli->log->fatal("export: aborted");
-   $cli->export($ql) or $cli->log->fatal("export: aborted");
+   $cli->export($arg) or $cli->log->fatal("export: aborted");
 }
 elsif ($lopts{user}) {
-   $cli->user($ql) or $cli->log->fatal("user: aborted");
+   $cli->user($arg) or $cli->log->fatal("user: aborted");
 }
 elsif ($lopts{simple}) {
-   $cli->simple($ql) or $cli->log->fatal("simple: aborted");
+   $cli->simple($arg) or $cli->log->fatal("simple: aborted");
 }
 elsif ($lopts{summary}) {
-   $cli->summary($ql, $lopts{summary}) or $cli->log->fatal("summary: aborted");
+   $cli->summary($lopts{summary}, $arg) or $cli->log->fatal("summary: aborted");
 }
 elsif ($lopts{alert}) {
-   $cli->alert($lopts{alert}, $ql) or $cli->log->fatal("alert: aborted");
+   $cli->alert($lopts{alert}, $arg, $lopts{alertname}, $lopts{alertemail},
+      $lopts{alertthreshold}) or $cli->log->fatal("alert: aborted");
 }
 else {  # Use Search API by default:
-   #$cli->pipeline($lopts{search}, 'search', $lopts{page}, $lopts{maxpage})
-      #or $cli->log->fatal("search: aborted");
-   $cli->search($ql) or $cli->log->fatal("search: aborted");
+   $cli->search($arg) or $cli->log->fatal("search: aborted");
 }
 
 exit(0);
@@ -127,14 +123,14 @@ sub usage {
 
 Usage: onyphe [options] -search -category datascan 'OQL | PQL'
        onyphe [options] -user
-       onyphe [options] -simple ip -category category 'IP | PQL'
-       onyphe [options] -simple data -category category 'DATA | PQL'
+       onyphe [options] -simple -category category 'IP | PQL'
+       onyphe [options] -simple -category category 'DATA | PQL'
        onyphe [options] -summary ip '1.1.1.1 | PQL'
        onyphe [options] -summary domain 'example.com | PQL'
        onyphe [options] -summary domain -bulk 'domains.txt | PQL'
        onyphe [options] -export -category datascan 'OQL | PQL'
        onyphe [options] -alert -list
-       onyphe [options] -alert -add -category datascan 'OQL'
+       onyphe [options] -alert -add -category datascan 'OQL' -alertname test -alertemail user\@example.com
        onyphe [options] -alert -del \$id
 
 General options:
@@ -154,14 +150,14 @@ API options:
 
 APIs:
 
-   -user                                   get information on your license
-   -search 'OQL | PQL'                     use Search API for query
-   -export 'OQL | PQL'                     use Export API for query
-   -simple <ip|domain|hostname|data> 'PQL' use Simple API for query
-   -summary <ip|domain|hostname> 'PQL'     use Summary API for query
-   -alert list                             use Alert API for query
-   -alert del \$id                         use Alert API for query
-   -alert add 'OQL'                        use Alert API for query
+   -user                                      get information on your license
+   -search 'OQL | PQL'                        use Search API for query
+   -export 'OQL | PQL'                        use Export API for query
+   -simple 'OQL | PQL'                        use Simple API for query
+   -summary <ip|domain|hostname> 'OQL | PQL'  use Summary API for query
+   -alert list                                use Alert API for query
+   -alert del \$id                            use Alert API for query
+   -alert add 'OQL' -alertname NAME -alertemail EMAIL   use Alert API for query
 
 EOF
 ;
