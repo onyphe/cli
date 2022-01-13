@@ -125,14 +125,14 @@ exit(0);
 sub usage {
    print<<EOF
 
-Usage: onyphe [options] -search -category datascan 'OQL | PQL'
+Usage: onyphe [options] -search -category datascan 'OQL | OPL'
        onyphe [options] -user
-       onyphe [options] -simple -category category 'IP | PQL'
-       onyphe [options] -simple -category category 'DATA | PQL'
-       onyphe [options] -summary ip '1.1.1.1 | PQL'
-       onyphe [options] -summary domain 'example.com | PQL'
-       onyphe [options] -summary domain -bulk 'domains.txt | PQL'
-       onyphe [options] -export -category datascan 'OQL | PQL'
+       onyphe [options] -simple -category datascan 'IP | OPL'
+       onyphe [options] -simple -category datascan 'DATA | OPL'
+       onyphe [options] -summary ip '1.1.1.1 | OPL'
+       onyphe [options] -summary domain 'example.com | OPL'
+       onyphe [options] -summary domain -bulk 'domains.txt | OPL'
+       onyphe [options] -export -category datascan 'OQL | OPL'
        onyphe [options] -alert -list
        onyphe [options] -alert -add -category datascan 'OQL' -alertname test -alertemail user\@example.com
        onyphe [options] -alert -del \$id
@@ -148,20 +148,20 @@ General options:
    -apikeepalive <0|1>                     use a keepalive message (default: 0)
 
 API options:
-   -category <category1,categor2,...>      give which category to query (default: datascan)
-   -bulk                                   use Bulk API verions for given query
-   -best                                   use Best API verions for given query
+   -category <category1,category2,...>     give which category to query (default: datascan)
+   -bulk                                   use Bulk API versions for given query
+   -best                                   use Best API versions for given query
 
 APIs:
 
-   -user                                      get information on your license
-   -search 'OQL | PQL'                        use Search API for query
-   -export 'OQL | PQL'                        use Export API for query
-   -simple 'OQL | PQL'                        use Simple API for query
-   -summary <ip|domain|hostname> 'OQL | PQL'  use Summary API for query
-   -alert list                                use Alert API for query
-   -alert del \$id                            use Alert API for query
-   -alert add 'OQL' -alertname NAME -alertemail EMAIL   use Alert API for query
+   -user                                                get information on your license
+   -search 'OQL | OPL'                                  use Search API for query
+   -export 'OQL | OPL'                                  use Export API for query
+   -simple 'OQL | OPL'                                  use Simple API for query
+   -summary <ip|domain|hostname> 'OQL | OPL'            use Summary API for query
+   -alert list                                          use Alert API for query
+   -alert del \$id                                       use Alert API for query
+   -alert add -alertname NAME -alertemail EMAIL 'OQL'   use Alert API for query
 
 EOF
 ;

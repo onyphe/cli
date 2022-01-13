@@ -187,8 +187,8 @@ sub simple {
       push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
       push @$apiargs, { size => $self->apisize } if $self->apisize;
       return $self->best
-         ? $self->ao->bulk_simple($oql, $category, $apiargs, $self->callback, $opl)
-         : $self->ao->bulk_simple_best($oql, $category, $apiargs, $self->callback, $opl);
+         ? $self->ao->bulk_simple_best($oql, $category, $apiargs, $self->callback, $opl)
+         : $self->ao->bulk_simple($oql, $category, $apiargs, $self->callback, $opl);
    }
    elsif ($self->best) {
       return $self->ao->simple_best($oql, $category, $self->callback, $opl);
