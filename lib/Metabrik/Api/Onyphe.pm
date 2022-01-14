@@ -18,13 +18,13 @@ sub brik_properties {
       author => 'GomoR <GomoR[at]metabrik.org>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       attributes => {
-         apiurl => [ qw(url) ],
-         apikey => [ qw(key) ],
+         url => [ qw(url) ],
+         key => [ qw(key) ],
          wait => [ qw(seconds) ],
          _sj => [ qw(INTERNAL) ],
       },
       attributes_default => {
-         apiurl => 'https://www.onyphe.io/api/v2',
+         url => 'https://www.onyphe.io/api/v2',
          wait => 1,
       },
       commands => {
@@ -34,17 +34,17 @@ sub brik_properties {
             request api oql apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          user => [ qw(cb|OPTIONAL cb_arg|OPTIONAL) ],
          search => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-         summary => [ qw(ip|domain|hostname OQL|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-         simple => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-         simple_best => [ qw(OQL category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         summary => [ qw(ip|domain|hostname input cb|OPTIONAL cb_arg|OPTIONAL) ],
+         simple => [ qw(input category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+         simple_best => [ qw(input category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          export => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          alert => [ qw(list|add|del OQL|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          bulk_summary => [ qw(
-            ip|domain|hostname OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+            ip|domain|hostname file apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          bulk_simple => [ qw(
-            OQL category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+            file category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          bulk_simple_best => [ qw(
-            OQL category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+            file category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
       },
       require_modules => {
          'Metabrik::String::Json' => [ ],
@@ -55,6 +55,8 @@ sub brik_properties {
       },
    };
 }
+
+# XXX: error handling
 
 sub brik_init {
    my $self = shift;
@@ -76,11 +78,11 @@ sub api_standard {
 
    my $sj = $self->_sj;
    my $wait = $self->wait;
-   my $apiurl = $self->apiurl;
-   my $apikey = $self->apikey;
+   my $url = $self->url;
+   my $key = $self->key;
 
    $self->add_headers({
-      'Authorization' => "apikey $apikey",
+      'Authorization' => "apikey $key",
       'Content-Type' => 'application/json',
    });
 
@@ -89,9 +91,9 @@ sub api_standard {
       $self->log->debug("api_standard: uri_escape_utf8 oql[$oql]");
    }
 
-   my $url = $apiurl.'/'.$api;
+   $url .= "/$api";
    if ($req eq "GET" && defined($oql)) {
-      $url .= '/'.$oql;
+      $url .= "/$oql";
    }
    if (defined($apiargs)) {
       my @args = ();
@@ -159,15 +161,15 @@ sub api_streaming {
    $self->brik_help_run_undef_arg("api_streaming", $oql) or return;
 
    my $sj = $self->_sj;
-   my $apiurl = $self->apiurl;
-   my $apikey = $self->apikey;
+   my $url = $self->url;
+   my $key = $self->key;
 
    if ($req eq "GET" && defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
       $self->log->debug("api_streaming: uri_escape_utf8 oql[$oql]");
    }
 
-   my $url = "$apiurl/$api";
+   $url .= "/$api";
    if ($req eq "GET") {
       $url .= "/$oql";
    }
@@ -205,7 +207,7 @@ sub api_streaming {
       # before sending a timeout.
       timeout => 300,
       headers => {
-         'Authorization' => "apikey $apikey",
+         'Authorization' => "apikey $key",
          'Content-Type' => "application/json",
       },
       on_body => sub {
@@ -374,14 +376,14 @@ sub search {
 #
 sub summary {
    my $self = shift;
-   my ($type, $oql, $cb, $cb_arg) = @_;
+   my ($type, $input, $cb, $cb_arg) = @_;
 
    $self->brik_help_run_undef_arg("summary", $type) or return;
-   $self->brik_help_run_undef_arg("summary", $oql) or return;
+   $self->brik_help_run_undef_arg("summary", $input) or return;
 
    $cb ||= $self->callback;
 
-   return $self->api_standard("GET", "summary/$type", $oql, undef, $cb, $cb_arg);
+   return $self->api_standard("GET", "summary/$type", $input, undef, $cb, $cb_arg);
 }
 
 # keepalive=true
@@ -415,14 +417,14 @@ sub bulk_summary {
 #
 sub simple {
    my $self = shift;
-   my ($oql, $category, $cb, $cb_arg) = @_;
+   my ($input, $category, $cb, $cb_arg) = @_;
 
-   $self->brik_help_run_undef_arg("simple", $oql) or return;
+   $self->brik_help_run_undef_arg("simple", $input) or return;
 
    $category ||= "datascan";
    $cb ||= $self->callback;
 
-   return $self->api_standard("GET", "simple/$category", $oql, undef, $cb, $cb_arg);
+   return $self->api_standard("GET", "simple/$category", $input, undef, $cb, $cb_arg);
 }
 
 sub simple_best {
@@ -560,6 +562,177 @@ __END__
 =head1 NAME
 
 Metabrik::Api::Onyphe - api::onyphe Brik
+
+=head1 SYNOPSIS
+
+   use Data::Dumper;
+   use Metabrik::Api::Onyphe;
+
+   my $ao = Metabrik::Api::Onyphe->new_brik_init();
+   $ao->key(<APIKEY>);
+
+   # Query the User API:
+   $ao->user();
+
+   # Query the Search API:
+   $ao->search("category:datascan product:nginx domain:example.com");
+
+   # Query the Search API and use your own callback:
+   my $cb = sub {
+      my ($results, $cb_arg) = @_;
+      print Data::Dumper::Dumper($results)."\n";
+      print Data::Dumper::Dumper($cb_arg)."\n";
+   };
+   my $cb_arg = { value => 1 };
+   $ao->search("category:datascan product:nginx domain:example.com", undef, $cb, $cb_arg);
+
+   # Query the Search API and return 20 results for 2 page:
+   my $apiargs = [ { page => 2 }, { size => 20 } ];
+   $ao->search("category:datascan product:nginx domain:example.com", $apiargs, $cb, $cb_arg);
+
+   # Query the Summary API for the given input:
+   $ao->summary("ip", "1.1.1.1");
+   $ao->summary("domain", "google.com");
+   $ao->summary("hostname", "www.google.com");
+
+   # Query the Simple API for the given input & category of information:
+   $ao->simple("1.1.1.1", "resolver");
+   $ao->simple("8.8.8.8", "datascan");
+
+   # Query the Simple Best API for the given input & category of information:
+   $ao->simple_best("1.1.1.1");
+   $ao->simple_best("1.1.1.1", "whois");
+
+   # Query the Export API and return 100 results at each loop:
+   $ao->export("category:vulnscan -exists:cve", [ { size => 100 } ]);
+
+   # List alerts set from Alert API:
+   $ao->alert('list');
+
+   # Add an alert:
+   $ao->alert('add', 'category:vulnscan -exists:cve domain:example');
+   # Add an alert and trigger an action:
+   my $action = sub {
+      my ($results) = @_;
+      # Perform your action here, like sending results by email.
+   };
+   $ao->alert('add', 'category:vulnscan -exists:cve domain:example', $action);
+
+   # Delete alert with ID 0:
+   $ao->alert('del', 0);
+
+   # Query the Bulk Summary API for an IP address list:
+   system("echo 1.1.1.1 > /tmp/ip.txt");
+   system("echo 2.2.2.2 >> /tmp/ip.txt");
+   system("echo 3.3.3.3 >> /tmp/ip.txt");
+   $ao->bulk_summary("ip", "/tmp/ip.txt");
+
+   # Query the Bulk Summary API for a domain name list:
+   system("echo example.com > /tmp/domain.txt");
+   system("echo google.com >> /tmp/domain.txt");
+   system("echo tesla.com >> /tmp/domain.txt");
+   $ao->bulk_summary("domain", "/tmp/domain.txt");
+
+   # Query the Bulk Summary API for a hostname (FQDN) list:
+   system("echo www.example.com > /tmp/hostname.txt");
+   system("echo www.google.com >> /tmp/hostname.txt");
+   system("echo www.tesla.com >> /tmp/hostname.txt");
+   $ao->bulk_summary("hostname", "/tmp/hostname.txt");
+
+   # Query the Bulk Simple API for given input file:
+   system("echo 1.1.1.1 > /tmp/ip.txt");
+   system("echo 2.2.2.2 >> /tmp/ip.txt");
+   system("echo 3.3.3.3 >> /tmp/ip.txt");
+   $ao->bulk_simple("/tmp/ip.txt", "datascan");
+
+   # Query the Bulk Simple Best API for given input file:
+   system("echo 1.1.1.1 > /tmp/ip.txt");
+   system("echo 2.2.2.2 >> /tmp/ip.txt");
+   system("echo 3.3.3.3 >> /tmp/ip.txt");
+   $ao->bulk_simple_best("/tmp/ip.txt", "whois");
+   $ao->bulk_simple_best("/tmp/ip.txt", "threatlist");
+
+=head1 DESCRIPTION
+
+Official Perl module as a Metabrik Brik to use the ONYPHE API. More documentation on the API available at:
+
+https://www.onyphe.io/documentation/api
+
+=head1 ATTRIBUTES
+
+=over 4
+
+=item B<url>
+
+Use the given API endpoint. Default value: 'https://www.onyphe.io/api/v2'.
+
+=item B<key> 
+
+Use the given API key. No default value, must be set before calling commands.
+
+=item B<wait>
+
+Use the given sleep time between each API request. Default: 1 second.
+
+=back
+
+=head1 COMMANDS
+
+=over 4
+
+=item B<brik_properties>
+
+Internal Metabrik function.
+
+=item B<brik_init>
+
+Internal Metabrik function.
+
+=item B<user> (callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the User API. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<search> (OQL, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Search API for the given OQL string. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<summary> (ip|domain|hostname, input, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Summary API for the given asset type and given input. Input is either an IP address, a hostname (FQDN) or a domain name. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<simple> (input, category|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Simple API for the given input. Input can be from different types: a string, an IP address, an MD5 hash, a hostname (FQDN) or a domain name. You have to specify which category of information you want to query. By default, datascan category is queried. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<simple_best> (input, category|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Simple Best API for the given input. Input can be from different types: a string, an IP address, an MD5 hash, a hostname (FQDN) or a domain name. You have to specify which category of information you want to query. By default, geoloc category is queried. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<export> (OQL, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Export API for the given OQL string. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<alert> (list|add|del, OQL|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Use the Alert API to list, add or del alerts. Depending on this first parameter, other parameter can be optional. See SYNOPSIS for details. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<bulk_summary> (ip|domain|hostname, file, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Bulk Summary API for the given asset type and given input text file. Input must be a text file with each entry on its own line. Each line must be either an IP address, a hostname (FQDN) or a domain name. For any unique given file, every line must be from the same asset type. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<bulk_simple> (input, category|OPTIONAL, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Bulk Simple API for the given input text file. Input must be a text file with each entry on its own line. Input file can only be composed of IP addresses. You have to specify which category of information you want to query. By default, datascan category is queried. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=item B<bulk_simple_best> (input, category|OPTIONAL, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+
+Query the Bulk Simple Best API for the given input text file. Input must be a text file with each entry on its own line. Input file can only be composed of IP addresses. You have to specify which category of information you want to query. By default, datascan category is queried. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+
+=back
+
+=head1 SEE ALSO
+
+L<Metabrik>
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -20,9 +20,9 @@ sub brik_properties {
          state => [ qw(state) ],
          # General options:
          maxpage => [ qw(value) ],
-         apiurl => [ qw(apiurl) ],
-         apikey => [ qw(apikey) ],
-         apisize => [ qw(apisize) ],
+         apiurl => [ qw(url) ],
+         apikey => [ qw(key) ],
+         apisize => [ qw(size) ],
          apitrackquery => [ qw(0|1) ],
          apikeepalive => [ qw(0|1) ],
          wait => [ qw(seconds) ],
@@ -85,8 +85,8 @@ sub ao {
    my $apiurl = $self->apiurl;
    my $apikey = $self->apikey;
 
-   $self->_ao->apiurl($apiurl);
-   $self->_ao->apikey($apikey);
+   $self->_ao->url($apiurl);
+   $self->_ao->key($apikey);
 
    return $self->_ao;
 }
