@@ -103,7 +103,11 @@ sub split_query {
 
    my ($oql, $opl) = split(/\s*\|\s*/, $query, 2);
 
-   #$self->log->info("split_query: query[$query] oql[$oql] opl[$opl]");
+   my $msg = "split_query:";
+   $msg .= " query[$query]" if defined($query);
+   $msg .= " oql[$query]" if defined($oql);
+   $msg .= " opl[$query]" if defined($opl);
+   $self->log->debug($msg);
 
    return ( $oql, $opl );
 }
@@ -273,7 +277,7 @@ sub alert {
    $category ||= $self->category;
 
    if ($type eq "list") {
-      $self->log->info("alert: query [$query]") if defined($query);
+      $self->log->verbose("alert: query [$query]") if defined($query);
       $self->ao->alert($type, $query, $self->callback) or return;
    }
    elsif ($type eq "add") {
