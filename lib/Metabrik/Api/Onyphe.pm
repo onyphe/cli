@@ -34,13 +34,13 @@ sub brik_properties {
             request api oql apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          user => [ qw(cb|OPTIONAL cb_arg|OPTIONAL) ],
          search => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
-         summary => [ qw(ip|domain|hostname input cb|OPTIONAL cb_arg|OPTIONAL) ],
+         summary => [ qw(input ip|domain|hostname|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          simple => [ qw(input category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          simple_best => [ qw(input category|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          export => [ qw(OQL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          alert => [ qw(list|add|del OQL|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          bulk_summary => [ qw(
-            ip|domain|hostname file apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
+            file ip|domain|hostname|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          bulk_simple => [ qw(
             file category|OPTIONAL apiargs|OPTIONAL cb|OPTIONAL cb_arg|OPTIONAL) ],
          bulk_simple_best => [ qw(
@@ -373,15 +373,16 @@ sub search {
 }
 
 #
-# $self->summary("ip", "1.1.1.1");
+# $self->summary("1.1.1.1");
+# $self->summary("example.com", "domain");
 #
 sub summary {
    my $self = shift;
-   my ($type, $input, $cb, $cb_arg) = @_;
+   my ($input, $type, $cb, $cb_arg) = @_;
 
-   $self->brik_help_run_undef_arg("summary", $type) or return;
    $self->brik_help_run_undef_arg("summary", $input) or return;
 
+   $type ||= "ip";
    $cb ||= $self->callback;
 
    return $self->api_standard("GET", "summary/$type", $input, undef, $cb, $cb_arg);
@@ -392,17 +393,17 @@ sub summary {
 # size=true
 
 #
-# $self->bulk_summary("ip", "input.txt");
-# $self->bulk_summary("ip", "input.txt", [{ size => 100 }, { keepalive => 1 }]);
+# $self->bulk_summary("input.txt", "ip");
+# $self->bulk_summary("input.txt", "ip", [{ size => 100 }, { keepalive => 1 }]);
 #
 sub bulk_summary {
    my $self = shift;
-   my ($type, $input, $apiargs, $cb, $cb_arg) = @_;
+   my ($input, $type, $apiargs, $cb, $cb_arg) = @_;
 
-   $self->brik_help_run_undef_arg("bulk_summary", $type) or return;
    $self->brik_help_run_undef_arg("bulk_summary", $input) or return;
    $self->brik_help_run_file_not_found("bulk_summary", $input) or return;
 
+   $type ||= "ip";
    $cb ||= $self->callback;
 
    my $ft = Metabrik::File::Text->new_from_brik_init($self) or return;
@@ -592,9 +593,9 @@ Metabrik::Api::Onyphe - api::onyphe Brik
    $ao->search("category:datascan product:nginx domain:example.com", $apiargs, $cb, $cb_arg);
 
    # Query the Summary API for the given input:
-   $ao->summary("ip", "1.1.1.1");
-   $ao->summary("domain", "google.com");
-   $ao->summary("hostname", "www.google.com");
+   $ao->summary("1.1.1.1", "ip");
+   $ao->summary("google.com", "domain");
+   $ao->summary("www.google.com", "hostname");
 
    # Query the Simple API for the given input & category of information:
    $ao->simple("1.1.1.1", "resolver");
@@ -628,19 +629,19 @@ Metabrik::Api::Onyphe - api::onyphe Brik
    system("echo 1.1.1.1 > /tmp/ip.txt");
    system("echo 2.2.2.2 >> /tmp/ip.txt");
    system("echo 3.3.3.3 >> /tmp/ip.txt");
-   $ao->bulk_summary("ip", "/tmp/ip.txt");
+   $ao->bulk_summary("/tmp/ip.txt", "ip");
 
    # Query the Bulk Summary API for a domain name list:
    system("echo example.com > /tmp/domain.txt");
    system("echo google.com >> /tmp/domain.txt");
    system("echo tesla.com >> /tmp/domain.txt");
-   $ao->bulk_summary("domain", "/tmp/domain.txt");
+   $ao->bulk_summary("/tmp/domain.txt", "domain");
 
    # Query the Bulk Summary API for a hostname (FQDN) list:
    system("echo www.example.com > /tmp/hostname.txt");
    system("echo www.google.com >> /tmp/hostname.txt");
    system("echo www.tesla.com >> /tmp/hostname.txt");
-   $ao->bulk_summary("hostname", "/tmp/hostname.txt");
+   $ao->bulk_summary("/tmp/hostname.txt", "hostname");
 
    # Query the Bulk Simple API for given input file:
    system("echo 1.1.1.1 > /tmp/ip.txt");
@@ -699,9 +700,9 @@ Query the User API. You can provide your own callback (see SYNOPSIS). By default
 
 Query the Search API for the given OQL string. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
 
-=item B<summary> (ip|domain|hostname, input, callback|OPTIONAL, callback_argument|OPTIONAL)
+=item B<summary> (input, ip|domain|hostname|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
 
-Query the Summary API for the given asset type and given input. Input is either an IP address, a hostname (FQDN) or a domain name. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+Query the Summary API for the given input and asset type. Input is either an IP address, a hostname (FQDN) or a domain name. You can provide your own callback (see SYNOPSIS). By default, type is set to ip and callback will print results as JSON on STDOUT.
 
 =item B<simple> (input, category|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
 
@@ -719,9 +720,9 @@ Query the Export API for the given OQL string. Can take additional API arguments
 
 Use the Alert API to list, add or del alerts. Depending on this first parameter, other parameter can be optional. See SYNOPSIS for details. You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
 
-=item B<bulk_summary> (ip|domain|hostname, file, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
+=item B<bulk_summary> (file, ip|domain|hostname|OPTIONAL, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
 
-Query the Bulk Summary API for the given asset type and given input text file. Input must be a text file with each entry on its own line. Each line must be either an IP address, a hostname (FQDN) or a domain name. For any unique given file, every line must be from the same asset type. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
+Query the Bulk Summary API for the given input text file and asset type. Input must be a text file with each entry on its own line. Each line must be either an IP address, a hostname (FQDN) or a domain name. For any unique given file, every line must be from the same asset type. Can take additional API arguments. API arguments are provided as an ARRAY of HASH values (see SYNOPSIS). You can provide your own callback (see SYNOPSIS). By default, callback will print results as JSON on STDOUT.
 
 =item B<bulk_simple> (input, category|OPTIONAL, API arguments|OPTIONAL, callback|OPTIONAL, callback_argument|OPTIONAL)
 

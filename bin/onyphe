@@ -103,7 +103,7 @@ elsif ($lopts{simple}) {
    $cli->simple($arg) or $cli->log->fatal("simple: aborted");
 }
 elsif ($lopts{summary}) {
-   $cli->summary($lopts{summary}, $arg) or $cli->log->fatal("summary: aborted");
+   $cli->summary($arg, $lopts{summary}) or $cli->log->fatal("summary: aborted");
 }
 elsif ($lopts{discovery}) {
    $cli->discovery($arg) or $cli->log->fatal("discovery: aborted");

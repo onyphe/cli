@@ -46,7 +46,7 @@ sub brik_properties {
          search => [ qw(query category|OPTIONAL maxpage|OPTIONAL) ],
          export => [ qw(query category|OPTIONAL) ],
          simple => [ qw(query category|OPTIONAL) ],
-         summary => [ qw(type query) ],
+         summary => [ qw(query type|OPTIONAL) ],
          discovery => [ qw(query category|OPTIONAL) ],
          alert => [ qw(type query|OPTIONAL category|OPTIONAL name|OPTIONAL email|OPTIONAL threshold|OPTIONAL) ],
       },
@@ -215,15 +215,17 @@ sub simple {
 }
 
 #
-# $self->summary("ip", "1.1.1.1");
-# $self->summary("ip", "1.1.1.1 | uniq domain");
+# $self->summary("1.1.1.1");
+# $self->summary("1.1.1.1 | uniq domain");
+# $self->summary("example.com", "domain");
 #
 sub summary {
    my $self = shift;
-   my ($type, $query) = @_;
+   my ($query, $type) = @_;
 
-   $self->brik_help_run_undef_arg("summary", $type) or return;
    $self->brik_help_run_undef_arg("summary", $query) or return;
+
+   $type ||= "ip";
 
    my ($oql, $opl) = $self->split_query($query);
 
@@ -237,7 +239,7 @@ sub summary {
       return $self->ao->bulk_summary($type, $oql, $apiargs, $self->callback, $opl);
    }
 
-   return $self->ao->summary($type, $oql, $self->callback, $opl);
+   return $self->ao->summary($oql, $type, $self->callback, $opl);
 }
 
 #
@@ -472,9 +474,9 @@ Metabrik::Client::Onyphe - official client for ONYPHE API access with OPL suppor
    $cli->simple("input.txt", "whois");
 
    # Query the Summary API for the given asset type and IP address:
-   $cli->summary("ip", "8.8.8.8");
+   $cli->summary("8.8.8.8", "ip");
    # Query the Summary API and perform OPL further processing:
-   $cli->summary("ip", "8.8.8.8 | uniq domain");
+   $cli->summary("8.8.8.8 | uniq domain", "ip");
 
    # Query the Discovery API, always in bulk mode:
    $cli->discovery("input.txt | uniq domain");
@@ -542,41 +544,51 @@ Activate keep alive mode: it will print some dummy results on API calls when not
 
 =item B<brik_properties>
 
+Internal method.
+
 =item B<brik_init>
 
-=item B<user>
+Internal method.
 
-Query user license information (enpoints and categories allowed along with remaining credits).
+=item B<user> (OPL)
 
-=item B<simple> (api, value)
+Query user license information (enpoints and categories allowed along with remaining credits, for instance). Allowed to perform OPL further processing on output.
 
-Use Simple API for queries (geoloc, inetnum, pastries, datascan, ...).
+=item B<simple> (query, category|OPTIONAL)
 
-=item B<summary> (api, value)
+Use Simple API for queries (geoloc, inetnum, pastries, datascan, ...). Allowed to perform OPL further processing on output.
 
-Use Summary API for queries (ip, domain, hostname).
+=item B<summary> (query, type|OPTIONAL)
 
-=item B<search> (query, page|OPTIONAL, maxpage|OPTIONAL)
+Use Summary API for queries. Type is optional and is like ip, domain or hostname (defaults to ip type).  Allowed to perform OPL further processing on output.
 
-Use Search API for queries.
+=item B<search> (query, category|OPTIONAL, maxpage|OPTIONAL)
 
-=item B<export> (query)
+Use the Search API for queries. Category and maxpage are optional and respectively defaults to datascan and maxpage 1. Allowed to perform OPL further processing on output.
 
-Use Export API for queries.
+=item B<export> (query, category|OPTIONAL)
 
-=item B<pipeline>
+Use Export API for queries. Category is optional and defaults to datascan. Allowed to perform OPL further processing on output.
 
-Perform a search or export query by using | separated list of functions.
+=item B<pipeline> (results, OPL, state)
 
-=item B<build_ao>  # XXX
+Allows to perform additional OPL processing against output from API calls. State between each processing loop can be retained by using the state object.
 
-=item B<split_query>  # XXX
+=item B<ao>
 
-=item B<ao>  # XXX
+api::onyphe Brik object.
 
-=item B<alert>  # XXX
+=item B<split_query> (query)
 
-=item B<discovery>  # XXX
+Split query in two scalars: OQL & OPL to let OQL be used in API calls and OPL within the function pipeline.
+
+=item B<alert> (list)
+
+=item B<alert> (add, query, category, name, email, threshold|OPTIONAL)
+
+=item B<alert> (del, id)
+
+=item B<discovery> (query, category|OPTIONAL)
 
 =back
 
