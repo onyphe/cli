@@ -1,5 +1,5 @@
 {
-   "abstract" : "official client for ONYPHE API access",
+   "abstract" : "official client for ONYPHE API access with OPL support",
    "author" : [
       "ONYPHE <contact_at_onyphe.io>"
    ],
@@ -37,7 +37,8 @@
          "version" : "3.00"
       },
       "Metabrik::Client::Onyphe::Function" : {
-         "file" : "lib/Metabrik/Client/Onyphe/Function.pm"
+         "file" : "lib/Metabrik/Client/Onyphe/Function.pm",
+         "version" : "3.00"
       },
       "Metabrik::Client::Onyphe::Function::Addcount" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Addcount.pm"

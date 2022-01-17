@@ -65,7 +65,7 @@ my $arg = pop @ARGV;  # Global argument
 load_onyphe_rc(%lopts);
 
 # Sanity checks
-sanity_checks(%lopts);
+sanity_checks(\%lopts, $arg);
 
 # Load logging module
 my $log = Metabrik::Client::Onyphe::Log->new_brik_init;
@@ -109,7 +109,7 @@ elsif ($lopts{discovery}) {
    $cli->discovery($arg) or $cli->log->fatal("discovery: aborted");
 }
 elsif ($lopts{alert}) {
-   $cli->alert($lopts{alert}, $arg, $lopts{alertname}, $lopts{alertemail},
+   $cli->alert($lopts{alert}, $arg, undef, $lopts{alertname}, $lopts{alertemail},
       $lopts{alertthreshold}) or $cli->log->fatal("alert: aborted");
 }
 else {  # Use Search API by default:
@@ -133,9 +133,9 @@ Usage: onyphe [options] -search -category datascan 'OQL | OPL'
        onyphe [options] -summary domain 'example.com | OPL'
        onyphe [options] -summary domain -bulk 'domains.txt | OPL'
        onyphe [options] -export -category datascan 'OQL | OPL'
-       onyphe [options] -alert -list
-       onyphe [options] -alert -add -category datascan 'OQL' -alertname test -alertemail user\@example.com
-       onyphe [options] -alert -del \$id
+       onyphe [options] -alert list
+       onyphe [options] -alert add -category datascan 'OQL' -alertname test -alertemail user\@example.com
+       onyphe [options] -alert del \$id
 
 General options:
 
@@ -154,14 +154,21 @@ API options:
 
 APIs:
 
-   -user                                                get information on your license
-   -search 'OQL | OPL'                                  use Search API for query
-   -export 'OQL | OPL'                                  use Export API for query
-   -simple 'OQL | OPL'                                  use Simple API for query
-   -summary <ip|domain|hostname> 'OQL | OPL'            use Summary API for query
-   -alert list                                          use Alert API for query
-   -alert del \$id                                       use Alert API for query
-   -alert add -alertname NAME -alertemail EMAIL 'OQL'   use Alert API for query
+   -user                                                 get information on your license
+   -search 'OQL | OPL'                                   use Search API for query
+   -export 'OQL | OPL'                                   use Export API for query
+   -simple 'OQL | OPL'                                   use Simple API for query
+   -simple -best 'OQL | OPL'                             use Simple Best API for query
+   -simple -bulk 'input.txt | OPL'                       use Bulk Simple API for query
+   -simple -bulk -best 'input.txt | OPL'                 use Bulk Simple Best API for query
+   -summary ip 'IP | OPL'                                use ip Summary API for query
+   -summary domain 'DOMAIN | OPL'                        use domain Summary API for query
+   -summary hostname 'HOSTNAME | OPL'                    use hostname Summary API for query
+   -summary -bulk <ip|domain|hostname> 'input.txt | OPL' use Bulk Summary API for query
+   -discovery 'input.txt | OPL'                          use Discovery API for query
+   -alert list                                           use Alert API for query
+   -alert del \$id                                        use Alert API for query
+   -alert add -alertname NAME -alertemail EMAIL 'OQL'    use Alert API for query
 
 EOF
 ;
@@ -195,37 +202,65 @@ sub load_onyphe_rc {
 }
 
 sub sanity_checks {
-   my ($lopts) = @_;
+   my ($lopts, $arg) = @_;
 
-   if (! defined($lopts{search}) && ! defined($lopts{simple})
-   &&  ! defined($lopts{summary}) && ! defined($lopts{user})
-   &&  ! defined($lopts{export})) {
-      print "ERROR: need -search, -simple, -summary, -export or -user argument\n";
+   #print Data::Dumper::Dumper($lopts)."\n";
+   #print Data::Dumper::Dumper($arg)."\n";
+
+   if (!defined($lopts->{search}) && !defined($lopts->{simple})
+   &&  !defined($lopts->{summary}) && !defined($lopts->{user})
+   &&  !defined($lopts->{export}) && !defined($lopts->{discovery})) {
+      print "ERROR: need one of -search, -simple, -summary, -export, -user or ".
+         "-discovery argument\n".
+         "Exemple: -search 'product:nginx', -user or -export 'product:nginx'\n\n";
       usage();
    }
 
-   if (! defined($lopts{apikey})) {
-      print "ERROR: -apikey argument missing\n";
+   if (defined($lopts{alert})) {
+      if ($lopts{alert} eq 'add') {
+         if (!defined($lopts{alertname}) || !defined($lopts{alertemail})) {
+            print "ERROR: need all alert arguments to be set\n".
+               "Example: -alert add -alertname test -alertemail user\@example.com ".
+               "'domain:example.com'\n\n";
+            usage();
+         }
+      }
+      elsif ($lopts{alert} eq 'del') {
+         if (!defined($arg) || $arg !~ m{^\d+$}) {
+            print "ERROR: need an alert id argument to be set\n".
+               "Example: -alert del 0\n\n";
+            usage();
+         }
+      }
+   }
+
+   if (!defined($lopts{alert}) && !defined($lopts{user}) && !defined($arg)) {
+      print "ERROR: need a query argument\n".
+         "Example: -search 'domain:example.com'\n\n";
       usage();
    }
 
-   #if (($lopts{simple} || $lopts{summary}) && ! defined($lopts{value})) {
-      #print "ERROR: -simple or -summary argument used but -value argument missing\n";
-      #usage();
-   #}
-
-   #if (! ($lopts{simple} || $lopts{summary} || $lopts{bulk}) && defined($lopts{value})) {
-      #print "ERROR: -simple argument missing but -value argument used\n";
-      #usage();
-   #}
-
-   if (defined($lopts{maxpage}) && $lopts{maxpage} !~ m{^\d+$}) {
-      print "ERROR: invalid maxpage value chosen: ".$lopts{maxpage}."\n";
+   if (!defined($lopts->{apikey})) {
+      print "ERROR: -apikey argument missing\n".
+         "Example: -apikey YOUR_API_KEY\n\n";
       usage();
    }
 
-   if ($lopts{verbose} !~ m{^\d+$}) {
-      print "ERROR: invalid verbose value chosen: ".$lopts{verbose}."\n";
+   if ($lopts{summary} && !defined($lopts{summary})) {
+      print "ERROR: -summary parameter used but value is missing\n".
+         "Example: -summary ip, -summary domain or -summary hostname\n\n";
+      usage();
+   }
+
+   if (defined($lopts->{maxpage}) && $lopts->{maxpage} !~ m{^\d+$}) {
+      print "ERROR: invalid maxpage value chosen: ".$lopts->{maxpage}."\n".
+         "Example: -maxpage 100\n\n";
+      usage();
+   }
+
+   if ($lopts->{verbose} !~ m{^\d+$}) {
+      print "ERROR: invalid verbose value chosen: ".$lopts->{verbose}."\n".
+         "Example: -verbose 2\n\n";
       usage();
    }
 

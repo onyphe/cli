@@ -135,7 +135,7 @@ sub api_standard {
    }
    elsif ($code == 200) {
       $results = $self->content;
-      $self->log->info("api_standard: success");
+      $self->log->verbose("api_standard: success");
    }
    else {
       $self->log->error("api_standard: code [$code], waiting before retry");
@@ -223,6 +223,7 @@ sub api_streaming {
          my $status = $hdr->{Status};
          my $encoding = $hdr->{'transfer-encoding'};
          if ($status == 200 && $encoding eq 'chunked') {
+            $self->log->verbose("api_streaming: success");
             # $this will contain all lines until the last one
             # with \n ending chars. This last one will be put back
             # into $buf for next processing.
@@ -242,7 +243,7 @@ sub api_streaming {
             for (@docs) {
                my $decode = $sj->decode($_);
                if (!defined($decode)) {
-                  $self->log->error("export: unable to decode [$_]");
+                  $self->log->error("api_streaming: unable to decode [$_]");
                   next;
                }
                next if (! $decode->{'@category'} || $decode->{'@category'} eq 'none');
@@ -271,7 +272,7 @@ sub api_streaming {
          my $status = $hdr->{Status};
          my $reason = $hdr->{Reason};
          if ($status != 200 && $status != 598) {
-            $self->log->error("completion: status [$status], reason ".
+            $self->log->error("api_streaming: completion status [$status], reason ".
                " [$reason]");
             #print Data::Dumper::Dumper($hdr)."\n";
          }
@@ -286,7 +287,7 @@ sub api_streaming {
                if (!defined($decode)) {
                   # On abort, line may be incomplete, don't print error.
                   if (! $abort) {
-                     $self->log->error("export: unable to decode remaining [$_]");
+                     $self->log->error("api_streaming: unable to decode remaining [$_]");
                   }
                   next;
                }
@@ -365,7 +366,7 @@ sub search {
 
    $self->brik_help_run_undef_arg("search", $oql) or return;
 
-   $apiargs ||= { page => 1 };
+   $apiargs ||= [ { page => 1 } ];
    $cb ||= $self->callback;
 
    return $self->api_standard("GET", "search", $oql, $apiargs, $cb, $cb_arg);
@@ -608,6 +609,8 @@ Metabrik::Api::Onyphe - api::onyphe Brik
 
    # List alerts set from Alert API:
    $ao->alert('list');
+   # Add an alert:
+   $ao->alert("add", "-exists:cve ?tag:fortune500 ?tag:global500 ?tag:cac40", "vulnscan");
 
    # Add an alert:
    $ao->alert('add', 'category:vulnscan -exists:cve domain:example');

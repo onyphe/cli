@@ -26,6 +26,14 @@ sub run {
    $self->brik_help_run_undef_arg('run', $page) or return;
    $self->brik_help_run_undef_arg('run', $where) or return;
 
+   my $ao_cb = sub {
+      my ($results, $new) = @_;
+      if (defined($results->{count}) && $results->{count} > 0) {
+         # Keep this page results if matches were found.
+         push @$new, @{$results->{results}};
+      }
+   };
+
    my $cb = sub {
       my ($this, $state, $new, $search) = @_;
 
@@ -47,11 +55,7 @@ sub run {
       my @searches = keys %searches;
       for my $search (@searches) {
          $self->log->verbose("where[$search]");
-         my $this_page = $self->search($search, 1, 1) or return;
-         if (defined($this_page->{count}) && $this_page->{count} > 0) {
-            # Keep this result if matches were found:
-            push @$new, $this;
-         }
+         $self->ao->search($search, [ { page => 1 } ], $ao_cb, $new);
       }
 
       return 1;
@@ -61,3 +65,26 @@ sub run {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Metabrik::Client::Onyphe::Function::Where - client::onyphe::function::where Brik
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2018-2022, Patrice E<lt>GomoRE<gt> Auffret
+
+You may distribute this module under the terms of The BSD 3-Clause License.
+See LICENSE file in the source distribution archive.
+
+=head1 AUTHOR
+
+Patrice E<lt>GomoRE<gt> Auffret
+
+=cut

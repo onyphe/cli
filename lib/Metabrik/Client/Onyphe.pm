@@ -41,14 +41,14 @@ sub brik_properties {
       },
       commands => {
          ao => [ ],
-         pipeline => [ qw(results state OPL|OPTIONAL) ],
-         user => [ qw(OPL|OPTIONAL) ],
-         search => [ qw(QL) ],
-         export => [ qw(QL) ],
-         simple => [ qw(QL) ],
-         summary => [ qw(type QL) ],
-         discovery => [ qw(QL) ],
-         alert => [ qw(type QL|OPTIONAL name|OPTIONAL email|OPTIONAL threshold|OPTIONAL) ],
+         pipeline => [ qw(results OPL state) ],
+         user => [ qw(query|OPTIONAL) ],
+         search => [ qw(query category|OPTIONAL maxpage|OPTIONAL) ],
+         export => [ qw(query category|OPTIONAL) ],
+         simple => [ qw(query category|OPTIONAL) ],
+         summary => [ qw(type query) ],
+         discovery => [ qw(query category|OPTIONAL) ],
+         alert => [ qw(type query|OPTIONAL category|OPTIONAL name|OPTIONAL email|OPTIONAL threshold|OPTIONAL) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
@@ -85,21 +85,25 @@ sub ao {
    my $apiurl = $self->apiurl;
    my $apikey = $self->apikey;
 
+   $self->brik_help_run_undef_arg('ao', $apiurl) or return;
+   $self->brik_help_run_undef_arg('ao', $apikey) or return;
+
    $self->_ao->url($apiurl);
    $self->_ao->key($apikey);
 
    return $self->_ao;
 }
 
-sub split_ql {
+# Will return ethier OQL + OPL when | is used, or just OPL when none is used:
+sub split_query {
    my $self = shift;
-   my ($ql) = @_;
+   my ($query) = @_;
 
-   return () unless defined($ql);
+   return () unless defined($query);
 
-   my ($oql, $opl) = split(/\s*\|\s*/, $ql, 2);
+   my ($oql, $opl) = split(/\s*\|\s*/, $query, 2);
 
-   #$self->log->info("split_ql: ql[$ql] oql[$oql] opl[$opl]");
+   #$self->log->info("split_query: query[$query] oql[$oql] opl[$opl]");
 
    return ( $oql, $opl );
 }
@@ -110,9 +114,9 @@ sub split_ql {
 #
 sub user {
    my $self = shift;
-   my ($ql) = @_;
+   my ($query) = @_;
 
-   my ($oql, $opl) = $self->split_ql($ql);
+   my ($opl) = $self->split_query($query);
 
    return $self->ao->user($self->callback, $opl);
 }
@@ -120,18 +124,21 @@ sub user {
 #
 # $self->search("product:nginx");
 # $self->search("product:nginx | uniq domain");
+# $self->search("domain:example.com | uniq hostname", "resolver");
+# $self->search("domain:example.com | uniq hostname", "resolver", 100);
 #
 sub search {
    my $self = shift;
-   my ($ql) = @_;
+   my ($query, $category, $maxpage) = @_;
 
-   my $category = $self->category;
+   $self->brik_help_run_undef_arg("search", $query) or return;
 
-   $ql = "category:$category $ql";
+   $category ||= $self->category;
+   $maxpage ||= $self->maxpage;
 
-   my $maxpage = $self->maxpage;
+   $query = "category:$category $query" unless $query =~ m{category:\S+};
 
-   my ($oql, $opl) = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_query($query);
 
    my $apiargs = [];
    push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
@@ -147,16 +154,19 @@ sub search {
 #
 # $self->export("product:nginx");
 # $self->export("product:nginx | uniq domain");
+# $self->export("domain:example.com | uniq hostname", "resolver");
 #
 sub export {
    my $self = shift;
-   my ($ql) = @_;
+   my ($query, $category) = @_;
 
-   my $category = $self->category;
+   $self->brik_help_run_undef_arg("export", $query) or return;
 
-   $ql = "category:$category $ql";
+   $category ||= $self->category;
 
-   my ($oql, $opl) = $self->split_ql($ql);
+   $query = "category:$category $query" unless $query =~ m{category:\S+};
+
+   my ($oql, $opl) = $self->split_query($query);
 
    my $apiargs = [];
    #push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;  # Not supported
@@ -170,14 +180,17 @@ sub export {
 # $self->simple("1.1.1.1");
 # $self->simple("1.1.1.1 | uniq domain");
 # $self->simple("input.txt | uniq domain");
+# $self->simple("input.txt | uniq domain", "resolver");
 #
 sub simple {
    my $self = shift;
-   my ($ql) = @_;
+   my ($query, $category) = @_;
 
-   my $category = $self->category;
+   $self->brik_help_run_undef_arg("simple", $query) or return;
 
-   my ($oql, $opl) = $self->split_ql($ql);
+   $category ||= $self->category;
+
+   my ($oql, $opl) = $self->split_query($query);
 
    if ($self->bulk) {
       return $self->log->error("simple: Bulk mode selected but file [$oql] not found")
@@ -203,12 +216,12 @@ sub simple {
 #
 sub summary {
    my $self = shift;
-   my ($type, $ql) = @_;
+   my ($type, $query) = @_;
 
    $self->brik_help_run_undef_arg("summary", $type) or return;
-   $self->brik_help_run_undef_arg("summary", $ql) or return;
+   $self->brik_help_run_undef_arg("summary", $query) or return;
 
-   my ($oql, $opl) = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_query($query);
 
    if ($self->bulk) {
       return $self->log->error("summary: Bulk mode selected but file [$oql] not found")
@@ -217,21 +230,26 @@ sub summary {
       push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
       push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
       push @$apiargs, { size => $self->apisize } if $self->apisize;
-      return $self->ao->bulk_summary($oql, $type, $apiargs, $self->callback, $opl);
+      return $self->ao->bulk_summary($type, $oql, $apiargs, $self->callback, $opl);
    }
 
-   return $self->ao->summary($oql, $type, $self->callback, $opl);
+   return $self->ao->summary($type, $oql, $self->callback, $opl);
 }
 
+#
+# $self->discovery("input.txt");
+# $self->discovery("input.txt | uniq domain");
+# $self->discovery("input.txt | uniq domain", "resolver");
+#
 sub discovery {
    my $self = shift;
-   my ($ql) = @_;
+   my ($query, $category) = @_;
 
-   $self->brik_help_run_undef_arg("discovery", $ql) or return;
+   $self->brik_help_run_undef_arg("discovery", $query) or return;
 
-   my $category = $self->category;
+   $category ||= $self->category;
 
-   my ($oql, $opl) = $self->split_ql($ql);
+   my ($oql, $opl) = $self->split_query($query);
 
    my $apiargs = [];
    push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
@@ -243,34 +261,38 @@ sub discovery {
 
 #
 # $self->alert("list");
-# $self->alert("add", "-exists:cve domain:example.com", "CVE found", 'user@example.com');
+# $self->alert("add", "-exists:cve domain:example.com", "vulnscan", "CVE found", 'user@example.com');
 # $self->alert("del", $id);
 #
 sub alert {
    my $self = shift;
-   my ($type, $ql, $name, $email, $threshold) = @_;
+   my ($type, $query, $category, $name, $email, $threshold) = @_;
 
    $self->brik_help_run_undef_arg("alert", $type) or return;
 
-   my $category = $self->category;
+   $category ||= $self->category;
 
    if ($type eq "list") {
-      $self->ao->alert($type, undef, $self->callback) or return;
+      $self->log->info("alert: query [$query]") if defined($query);
+      $self->ao->alert($type, $query, $self->callback) or return;
    }
    elsif ($type eq "add") {
-      $self->brik_help_run_undef_arg("alert", $ql) or return;
+      $self->brik_help_run_undef_arg("alert", $query) or return;
       $self->brik_help_run_undef_arg("alert", $name) or return;
       $self->brik_help_run_undef_arg("alert", $email) or return;
-      $ql = "category:$category $ql" if defined($ql);
-      $self->log->verbose("alert: adding alert [$ql]");
-      my $post = { name => $name, email => $email, query => $ql };
+      $query = "category:$category $query" unless $query =~ m{category:\S+};
+      $self->log->verbose("alert: adding alert [$query]");
+      my $post = { name => $name, email => $email, query => $query };
       $post->{threshold} = $threshold if defined($threshold);
       $self->ao->alert($type, $post, $self->callback) or return;
    }
    else {  # del
-      $self->brik_help_run_undef_arg("alert", $ql) or return;
-      $self->log->verbose("alert: deleting alert id [$ql]");
-      $self->ao->alert($type, $ql, $self->callback) or return;
+      $self->brik_help_run_undef_arg("alert", $query) or return;
+      if ($query !~ m{^\d+}) {
+         return $self->log->error("alert: invalid id found [$query], must be an integer");
+      }
+      $self->log->verbose("alert: deleting alert id [$query]");
+      $self->ao->alert($type, $query, $self->callback) or return;
    }
 
    return 1;
@@ -296,9 +318,7 @@ sub pipeline {
       return $results;
    };
 
-   if (!defined($opl)) {
-      return $cb->($results);
-   }
+   return $cb->($results) unless defined($opl);
 
    my @cmd = split(/\s*\|\s*-?/, $opl);
    if (@cmd == 0) {
@@ -313,9 +333,7 @@ sub pipeline {
    my $opl_cb = sub {
       my ($results, $state) = @_;
 
-      if (!defined($results)) {
-         return;
-      }
+      return unless defined($results);
 
       for my $this (@cmd) {
          $this =~ s{[\s\r\n]*$}{};
@@ -346,6 +364,8 @@ sub pipeline {
 
          my $argument = $function[1];
 
+         # When it is a last kind of function, we do not continue processing
+         # the pipeline and just skip whatever is following:
          if ($function->last) {
             $last_function = $function;
             $last_argument = $argument;
@@ -356,7 +376,7 @@ sub pipeline {
          $self->log->verbose("pipeline: function[$function]");
 
          $results = $function->run($results, $state, $argument);
-         last if (!defined($results));
+         last unless defined($results);
 
          $last_results = $results;
       }
@@ -390,40 +410,125 @@ __END__
 
 =head1 NAME
 
-Metabrik::Client::Onyphe - official client for ONYPHE API access
+Metabrik::Client::Onyphe - official client for ONYPHE API access with OPL support
 
 =head1 SYNOPSIS
 
    use Metabrik::Client::Onyphe;
 
-   my $cli = Metabrik::Client::Onyphe->new_brik_init;
+   my $cli = Metabrik::Client::Onyphe->new_brik_init();
    $cli->apikey(<APIKEY>);
 
-   # Search first page of results only
-   $cli->search('category:datascan port:80');
+   # All methods will print results on STDOUT once query has been processed through pipeline
 
-   # Search given page of results
-   $cli->search('category:datascan port:80', 10);
+   # Show user profile information, like which APIs are allowed, which category of information
+   # or other informations like scanned ports or checked vulnerabilities:
+   $cli->user();
+   # Just display CVEs checked by vulnscan:
+   $cli->user("uniq vulnscan.cve");
+   # Just display TCP ports scanned:
+   $cli->user("uniq ports.tcp");
 
-   $cli->search('category:datascan port:80', 10, 20);
+   # Search all Nginx exposed found in datascan category:
+   $cli->search("product:nginx");
+   # Enumerate all unique domains which have an Nginx server exposed:
+   $cli->search("product:nginx | uniq domain");
+   # Enumerate all unique hostnames (FQDNs) found from resolver category:
+   $cli->search("domain:example.com | uniq hostname", "resolver");
+   # Iterate over all 1000 maximum pages available to Search API:
+   $cli->search("domain:example.com | uniq hostname", "resolver", 1000);
 
-   $cli->export('category:datascan protocol:http');
+   # Export all Apache servers running on Windows from datascan category:
+   $cli->export("os:windows productvendor:apache");
+   # Export all subject.organization from ctl category:
+   $cli->export("-exists:subject.organization", "ctl");
+   # Build a unique list of all domains belonging to the .top tld from ctl category:
+   $cli->export("tld:top -exists:domain | uniq domain", "ctl");
 
-   # Search using the simple API
-   $cli->simple_datascan('apache');
-   $cli->simple_resolver_reverse('8.8.8.8');
+   # Query the Simple API for information found in datascan category for 8.8.8.8:
+   $cli->simple("8.8.8.8");
+   # Search all unique domains found in datascan category for 8.8.8.8:
+   $cli->simple("8.8.8.8 | uniq domain");
+   # Search all unique domains found in resolver category for 8.8.8.8:
+   $cli->simple("8.8.8.8 | uniq domain", "resolver");
+   # Perform Bulk Simple API calls:
+   system("echo 1.1.1.1 > /tmp/input.txt");
+   system("echo 2.2.2.2 >> /tmp/input.txt");
+   system("echo 3.3.3.3 >> /tmp/input.txt");
+   $cli->best(0);
+   $cli->bulk(1);
+   $cli->simple("input.txt | uniq domain", "resolver");
+
+   # Search the best match for given input using Bulk Simple Best API and whois category:
+   $cli->best(1);
+   $cli->bulk(1);
+   system("echo 1.1.1.1 > /tmp/input.txt");
+   system("echo 2.2.2.2 >> /tmp/input.txt");
+   system("echo 3.3.3.3 >> /tmp/input.txt");
+   $cli->simple("input.txt", "whois");
+
+   # Query the Summary API for the given asset type and IP address:
+   $cli->summary("ip", "8.8.8.8");
+   # Query the Summary API and perform OPL further processing:
+   $cli->summary("ip", "8.8.8.8 | uniq domain");
+
+   # Query the Discovery API, always in bulk mode:
+   $cli->discovery("input.txt | uniq domain");
+   # Query the Discovery API, always in bulk mode, against resolver category:
+   $cli->discovery("input.txt | uniq domain", "resolver");
+
+   # List alerts by using the Alert API:
+   $cli->alert("list");
 
 =head1 DESCRIPTION
 
-Official client for ONYPHE API access.
+Official client for ONYPHE API access with OPL support. OPL is ONYPHE Processing Language, a pipeline used to pass results from a function to another for specific processing on client side. That allows, for instance, to perform correlation between multiple categories of information.
+
+Thus, an input query is split between the OQL (ONYPHE Query Language) and the OPL. OQL is executed server-side via ONYPHE API while OPL is executed client-side, except for a few functions which are able to call the ONYPHE API again by using previous function results (correlation support).
 
 =head1 ATTRIBUTES
 
 =over 4
 
-=item B<apikey>
+=item B<maxpage> (N)
 
-=item B<apiurl>
+When using Search API, perform autoscroll on a number of paged results. Default: 1.
+
+=item B<wait> (seconds)
+
+Wait time between each requests to avoid hitting rate limit. Default: 1.
+
+=item B<category> (category)
+
+Select which category of information to query. Default: datascan or geoloc, depending on the API used.
+
+=item B<bulk> (0|1)
+
+Activate bulk request mode for APIs supporting that feature. Default: 0.
+
+=item B<best> (0|1)
+
+Activate best request mode for APIs supporting that feature. Default: 0.
+
+=item B<apikey> (key)
+
+Your client API key. Default: none.
+
+=item B<apiurl> (url)
+
+ONYPHE API endpoint. Default: https://www.onyphe.io/api/v2
+
+=item B<apisize> (N)
+
+Number of results to return per page. Default: 10.
+
+=item B<apitrackquery> (0|1)
+
+Activate track query mode: it will add a trackquery field to results. Default: 0.
+
+=item B<apikeepalive> (0|1)
+
+Activate keep alive mode: it will print some dummy results on API calls when nothing has been rendered to support long running API calls. Default: 0.
 
 =back
 
@@ -461,7 +566,7 @@ Perform a search or export query by using | separated list of functions.
 
 =item B<build_ao>  # XXX
 
-=item B<split_ql>  # XXX
+=item B<split_query>  # XXX
 
 =item B<ao>  # XXX
 

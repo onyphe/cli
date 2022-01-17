@@ -11,7 +11,7 @@ INSTALLATION
 
   $ sudo apt-get install -y build-essential less cpanminus libreadline-dev \
      coreutils libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev \
-     procps aptitude
+     procps aptitude liblwp-protocol-https-perl perl-doc
 
   B/ Install Metabrik and its Repository
 
@@ -42,24 +42,24 @@ INSTALLATION
 
   Current list of custom functions:
   - addcount
+  - allowlist
   - blocklist
   - count
   - dedup
   - exec
+  - expand
+  - fields
   - httpshot
   - lookup
   - merge
+  - output
   - piechart
   - search
+  - splitsubnet
   - top
   - uniq
   - where
-  - allowlist
   - whois
-  - expand
-  - output
-  - fields
-  - splitsubnet
 
   G/ Enjoy
 
@@ -71,38 +71,33 @@ EXAMPLES
   $ onyphe -user | jq .
 
   #
-  # Query the simple API
+  # Query the Simple API
   # See https://www.onyphe.io/documentation/api for more APIs
   #
 
-  # Search reverse DNS information
-  $ onyphe -simple resolver_reverse -value 8.8.8.8
+  # Search DNS information for given IP address:
+  $ onyphe -simple -category resolver 8.8.8.8
 
-  # Search data from free text
+  # Search data from free text:
   $ onyphe -simple datascan -value 'WD My Cloud'
 
-  # Get a summary of information from an IP address
-  $ onyphe -summary ip -value 8.8.8.8
+  # Get a summary of information from an IP address:
+  $ onyphe -summary ip 8.8.8.8
 
   #
-  # Query the search API (need subscription, see https://www.onyphe.io/pricing)
+  # Query the Search API (need subscription, see https://www.onyphe.io/pricing)
   # See https://www.onyphe.io/documentation/api for more APIs
   #
 
-  # Search for some NGINX products and encode data field as Base64
+  # Search for some specific products:
   $ onyphe -search 'category:datascan product:Nginx' | jq .
 
-  # Just display useful information to you
+  # Just display useful information to you:
   $ onyphe -search 'category:datascan product:Nginx -field:ip,port,tls,product,productversion,cpe'
 
-  # Autoscroll through all results
+  # Scroll more than just the first page (maximum page is 1,000 to get up to 10,000 results):
   # !!! WARNING: may consume up to 1,000 credits
-  $ onyphe -search 'category:datascan protocol:smb tag:smb::compression' \
-     -autoscroll 1
-
-  # Autoscroll feature but limit the number of pages to scroll
-  $ onyphe -search 'category:datascan protocol:smb tag:smb::compression' \
-     -autoscroll 1 -maxpage 10
+  $ onyphe -maxpage 1000 -search 'category:datascan protocol:smb tag:smb::compression'
 
   # Save Mirai threatlist information from yesterday results
   $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' > mirai.json
@@ -110,7 +105,7 @@ EXAMPLES
   # Execute a where clause to return results that match criterias from another query
   # Here, we want to find modbus devices which also have a Web interface.
   # !!! WARNING: may consume up to 11,000 credits.
-  $ onyphe -autoscroll 1 -search \
+  $ onyphe -maxpage 1000 -search \
       'category:datascan protocol:modbus -dayago:1 \
      | search category:datascan protocol:http ip:$ip'
 
@@ -129,7 +124,7 @@ EXAMPLES
 
 COPYRIGHT AND LICENSE
 
-   Copyright (c) 2018-2020, ONYPHE
+   Copyright (c) 2018-2022, ONYPHE
 
    You may distribute this module under the terms of The BSD 3-Clause License.
    See LICENSE file in the source distribution archive.

@@ -5,6 +5,8 @@ package Metabrik::Client::Onyphe::Function;
 use strict;
 use warnings;
 
+our $VERSION = '3.00';
+
 use base qw(Metabrik::Client::Onyphe);
 
 sub brik_properties {
@@ -99,8 +101,8 @@ sub flatten {
    return $sub->($doc);
 }
 
-# Will iterate over all object results. Output of functions will create an new ARRAY
-# of objects, maybe modified by the pipeline.
+# Will iterate over all object results. Output of functions will create a new ARRAY
+# of objects, maybe modified by some pipeline functions.
 sub iter {
    my $self = shift;
    my ($page, $cb, $state, @args) = @_;
@@ -160,3 +162,26 @@ sub parse_v2 {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Metabrik::Client::Onyphe::Function - client::onyphe::function Brik
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2018-2022, Patrice E<lt>GomoRE<gt> Auffret
+
+You may distribute this module under the terms of The BSD 3-Clause License.
+See LICENSE file in the source distribution archive.
+
+=head1 AUTHOR
+
+Patrice E<lt>GomoRE<gt> Auffret
+
+=cut
