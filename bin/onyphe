@@ -164,7 +164,7 @@ APIs:
    -summary ip 'IP | OPL'                                use ip Summary API for query
    -summary domain 'DOMAIN | OPL'                        use domain Summary API for query
    -summary hostname 'HOSTNAME | OPL'                    use hostname Summary API for query
-   -summary -bulk <ip|domain|hostname> 'input.txt | OPL' use Bulk Summary API for query
+   -summary <ip|domain|hostname> -bulk 'input.txt | OPL' use Bulk Summary API for query
    -discovery 'input.txt | OPL'                          use Discovery API for query
    -alert list                                           use Alert API for query
    -alert del \$id                                        use Alert API for query
