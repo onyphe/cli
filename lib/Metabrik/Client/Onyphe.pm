@@ -236,7 +236,7 @@ sub summary {
       push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
       push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
       push @$apiargs, { size => $self->apisize } if $self->apisize;
-      return $self->ao->bulk_summary($type, $oql, $apiargs, $self->callback, $opl);
+      return $self->ao->bulk_summary($oql, $type, $apiargs, $self->callback, $opl);
    }
 
    return $self->ao->summary($oql, $type, $self->callback, $opl);
