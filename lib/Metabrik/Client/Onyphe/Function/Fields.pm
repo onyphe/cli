@@ -14,39 +14,37 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state args) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | fields ip,protocol,domain,app.http.component.product
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $args) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $args) or return;
+   my $parsed = $self->parse_v2($args);
+   my $keep = $parsed->{0} || {};
 
-   my $arg = $self->parse($args);
-   my $keep = $arg->[0] || {};
-
+   # Build list of fields to be kept from input argument:
    if (defined($keep)) {
       $keep = { map { $_ => 1 } split(/\s*,\s*/, $keep) };
    }
 
-   my $cb = sub {
-      my ($this, $state, $new, $keep) = @_;
+   # Get list of full flat field names:
+   my $fields = $self->fields($flat);
 
-      for my $k (keys %$this) {
-         next if $keep->{$k};
-         delete $this->{$k};
-      }
+   # Iterate over all flat fields and delete those not wanted for being kept:
+   for my $k (@$fields) {
+      $self->delete($flat, $k) if !$keep->{$k};
+   }
 
-      push @$new, $this;
+   push @$output, $flat;
 
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $keep);
+   return 1;
 }
 
 1;

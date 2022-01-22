@@ -306,40 +306,40 @@ sub alert {
 
 sub pipeline {
    my $self = shift;
-   my ($results, $opl, $state) = @_;
+   my ($page, $opl, $state) = @_;
 
    my $sj = $self->_sj;
 
    # Prints on STDOUT as JSON:
    my $cb = sub {
-      my ($results) = @_;
+      my ($page) = @_;
 
-      my $docs = $results->{results};
-      return $results if (!defined($docs) || @$docs == 0);
+      my $docs = $page->{results};
+      return $page if (!defined($docs) || @$docs == 0);
 
       for my $doc (@$docs) {
          print $sj->encode($doc)."\n";
       }
 
-      return $results;
+      return $page;
    };
 
-   return $cb->($results) unless defined($opl);
+   return $cb->($page) unless defined($opl);
 
    my @cmd = split(/\s*\|\s*-?/, $opl);
    if (@cmd == 0) {
       return $self->log->error("pipeline: no OPL query found");
    }
 
-   my $last_results;
+   my $last_page;
    my $last_function;
    my $last_argument;
    my $last_state;
 
    my $opl_cb = sub {
-      my ($results, $state) = @_;
+      my ($page, $state) = @_;
 
-      return unless defined($results);
+      return unless defined($page);
 
       for my $this (@cmd) {
          $this =~ s{[\s\r\n]*$}{};
@@ -364,6 +364,7 @@ sub pipeline {
             return;
          }
          # So function can call main client::onyphe client
+         # XXX: should be removed completely
          $function->apiurl($self->apiurl);
          $function->apikey($self->apikey);
          # XXX: apiargs?
@@ -381,15 +382,15 @@ sub pipeline {
 
          $self->log->verbose("pipeline: function[$function]");
 
-         $results = $function->run($results, $state, $argument);
-         last unless defined($results);
+         $page = $function->run_v2($page, $state, $argument);
+         last unless defined($page);
 
-         $last_results = $results;
+         $last_page = $page;
       }
 
-      if (defined($results)) {
+      if (defined($page)) {
          # Put back in line format
-         my $docs = $results->{results};
+         my $docs = $page->{results};
 
          for my $doc (@$docs) {
             print $sj->encode($doc)."\n";
@@ -397,14 +398,14 @@ sub pipeline {
       }
 
       # May return undefined on errors.
-      return $results;
+      return $page;
    };
 
    # To keep state between each page of results
-   $opl_cb->($results, $state);
+   $opl_cb->($page, $state);
 
-   if (defined($last_function) && defined($last_results)) {
-      $last_function->run($last_results, $last_state, $last_argument);
+   if (defined($last_function) && defined($last_page)) {
+      $last_function->run_v2($last_page, $last_state, $last_argument);
    }
 
    return 1;

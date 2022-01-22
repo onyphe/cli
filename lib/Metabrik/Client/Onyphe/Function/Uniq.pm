@@ -14,35 +14,31 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state field) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | uniq hostname
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $field) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $field) or return;
+   my $parsed = $self->parse_v2($args);
+   my $field = $parsed->{0} or return $self->log->error("uniq: need argument");
 
-   my $cb = sub {
-      my ($this, $state, $new, $field) = @_;
+   my $value = $self->value($flat, $field)
+      or return $self->log->error("uniq: field not found: $field");
 
-      my $value = $self->value_as_array($this, $field) or return 1;
-
-      my @new = @$new;
-      for my $v (@$value) {
-         next if $state->{uniq}{$v};
-         $state->{uniq}{$v}++;
-         push @new, { $field => $v };
-      }
-      @$new = @new;
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $field);
+   for my $v (@$value) {
+      next if $state->{uniq}{$v};
+      $state->{uniq}{$v}++;
+      push @$output, { $field => $v };
+   }
+      
+   return 1;
 }
 
 1;
