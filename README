@@ -79,7 +79,7 @@ EXAMPLES
   $ onyphe -simple -category resolver 8.8.8.8
 
   # Search data from free text:
-  $ onyphe -simple datascan -value 'WD My Cloud'
+  $ onyphe -simple -category datascan 'WD My Cloud'
 
   # Get a summary of information from an IP address:
   $ onyphe -summary ip 8.8.8.8
@@ -121,6 +121,11 @@ EXAMPLES
 
   # Display top countries for an organization:
   $ onyphe -export 'category:geoloc organization:"Global Layer B.V." | top country | piechart'
+
+  # Uncloak .onion servers:
+  onyphe -apikeepalive 1 -export 'category:onionscan -exists:app.http.bodymd5 \
+     | where category:datascan app.http.bodymd5:$app.http.bodymd5 \
+     | fields ip,domain,protocol,app.http.bodymd5,classification'
 
 COPYRIGHT AND LICENSE
 
