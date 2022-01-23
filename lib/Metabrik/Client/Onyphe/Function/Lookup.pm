@@ -19,7 +19,7 @@ sub brik_properties {
          _csv_header_count => [ qw(INTERNAL) ],
       },
       commands => {
-         run => [ qw(page state csv) ],
+         process => [ qw(flat state args output) ],
       },
       require_modules => {
          'Metabrik::File::Csv' => [ ],
@@ -27,12 +27,20 @@ sub brik_properties {
    };
 }
 
-sub run {
+#
+# echo domain,mytags > lookup.csv
+# echo amazonaws.com,aws >> lookup.csv
+#
+# | lookup lookup.csv
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $lookup) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $lookup) or return;
-   $self->brik_help_run_file_not_found('run', $lookup) or return;
+   my $parsed = $self->parse_v2($args);
+   my $lookup = $parsed->{0};
+
+   $self->brik_help_run_file_not_found('process', $lookup) or return;
 
    my $csv;
    my $csv_header;
@@ -52,31 +60,25 @@ sub run {
       $csv_header_count = $self->_csv_header_count;
    }
 
-   my $cb = sub {
-      my ($this, $state, $new, $lookup) = @_;
+   # $field is the field to match against (example: domain):
+   for my $field (@{$self->fields($flat)}) {
+      # Fetch the value from current result $flat:
+      my $values = $self->value($flat, $field) or next;
 
-      # $field is the field to match against (example: domain):
-      for my $field (keys %$this) {
-         # Fetch the value from current result $this:
-         my $value = $self->value_as_array($this, $field) or next;
-
-         # Lookup against all fields given in the CSV:
-         for my $a (@$value) {
-            for my $h (@$csv) {
-               if (exists($h->{$field}) && $h->{$field} eq $a) {
-                  #print "[DEBUG] lookup found [$field] value [$a]\n";
-                  push @{$this->{lookup}}, $h;
-               }
+      # Lookup against all fields given in the CSV:
+      for my $a (@$values) {
+         for my $h (@$csv) {
+            if (exists($h->{$field}) && $h->{$field} eq $a) {
+               #print "[DEBUG] lookup found [$field] value [$a]\n";
+               push @{$flat->{lookup}}, $h;
             }
          }
       }
+   }
 
-      push @$new, $this;
+   push @$output, $flat;
 
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $lookup);
+   return 1;
 }
 
 1;

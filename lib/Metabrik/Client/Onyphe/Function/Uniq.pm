@@ -37,7 +37,7 @@ sub process {
       $state->{uniq}{$v}++;
       push @$output, { $field => $v };
    }
-      
+
    return 1;
 }
 

@@ -127,6 +127,10 @@ EXAMPLES
      | where category:datascan app.http.bodymd5:$app.http.bodymd5 \
      | fields ip,domain,protocol,app.http.bodymd5,classification'
 
+  # Execute a custom script
+  # Note: myscript.pl will take the JSON document as input from a file script must read:
+  onyphe -search 'product:nginx | exec myscript.pl'
+
 COPYRIGHT AND LICENSE
 
    Copyright (c) 2018-2022, ONYPHE

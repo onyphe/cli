@@ -19,7 +19,7 @@ sub brik_properties {
          _csv_header_count => [ qw(INTERNAL) ],
       },
       commands => {
-         run => [ qw(page state csv) ],
+         process => [ qw(flat state args output) ],
       },
       require_modules => {
          'Metabrik::File::Csv' => [ ],
@@ -28,29 +28,20 @@ sub brik_properties {
    };
 }
 
-sub run {
+#
+#
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $args) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $args) or return;
+   my $parsed = $self->parse_v2($args);
+   my $cidr = $parsed->{cidr} || 'ip';  # Use ip field for subnet matching by default
+   my $lookup = $parsed->{0};
 
-   my $arg = $self->parse($args);
-   my $lookup = $arg->[0];
-   $self->brik_help_run_file_not_found('run', $lookup) or return;
+   $self->brik_help_run_file_not_found('process', $lookup) or return;
 
-   my $na;
-   my $cidr_mode;
-   my $cidr_field;
-   my $cidr = $arg->[1];
-   if (defined($cidr)) {
-      ($cidr_mode, $cidr_field) = $cidr =~ m{^(cidr)=(\w+)$};
-      $cidr_field ||= 'ip';
-
-      if ($cidr_mode) {
-         $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
-      }
-   }
+   my $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
 
    my $csv;
    my $csv_header;
@@ -70,59 +61,53 @@ sub run {
       $csv_header_count = $self->_csv_header_count;
    }
 
-   my $cb = sub {
-      my ($this, $state, $new, $lookup) = @_;
+   my $skip = 0;
+   # $field is the field to match against (example: domain):
+   for my $field (@$csv_header) {
+      # In CIDR match mode, the given field is to be matched against subnet:
+      my $match_field = $field;
+      if ($field eq $cidr) {
+         $match_field = 'subnet';
+      }
 
-      my $skip = 0;
-      # $field is the field to match against (example: domain):
-      for my $field (@$csv_header) {
-         # In CIDR match mode, the given field is to be matched against subnet:
-         my $match_field = $field;
-         if ($cidr_mode && $field eq $cidr_field) {
-            $match_field = 'subnet';
-         }
+      # Fetch the value from current result $flat:
+      my $values = $self->value($flat, $match_field) or next;
 
-         # Fetch the value from current result $this:
-         my $value = $self->value_as_array($this, $match_field) or next;
-
-         # Compare against all fields given in the CSV:
-         for my $a (@$value) {
-            my $match = 0;
-            for my $h (@$csv) {
-               #print "[DEBUG] match_field [$match_field] value [".$h->{$field}."] a[$a]\n";
-               if (exists($h->{$field})) {
-                  if (!$cidr_mode && $h->{$field} eq $a) {
-                     #print "[DEBUG] skip field [$field] value [$a]\n";
-                     $skip++;
-                     $match++;
-                     last;
-                  }
-                  elsif ($cidr_mode && $na->match($h->{$field}, $a)) {
-                     #print "[DEBUG] skip field [$field] value [$a]\n";
-                     $skip++;
-                     $match++;
-                     last;
-                  }
+      # Compare against all fields given in the CSV:
+      for my $a (@$values) {
+         my $match = 0;
+         for my $h (@$csv) {
+            #print "[DEBUG] match_field [$match_field] value [".$h->{$field}."] a[$a]\n";
+            if (exists($h->{$field})) {
+               if ($field ne $cidr && $h->{$field} eq $a) {
+                  #print "[DEBUG] skip field [$field] value [$a]\n";
+                  $skip++;
+                  $match++;
+                  last;
+               }
+               elsif ($field eq $cidr && $na->match($h->{$field}, $a)) {
+                  #print "[DEBUG] skip field [$field] value [$a]\n";
+                  $skip++;
+                  $match++;
+                  last;
                }
             }
-            last if $match;
          }
-
-         # When all fields have matched, no need to compare with remaining
-         if ($skip == $csv_header_count) {
-            #print "[DEBUG] all fields matched [$skip]\n";
-            last;
-         }
-      }
-      if ($skip != $csv_header_count) { # Not all fields have matched, it is
-                                        # NOT blacklisted, we keep results
-         push @$new, $this;
+         last if $match;
       }
 
-      return 1;
-   };
+      # When all fields have matched, no need to compare with remaining
+      if ($skip == $csv_header_count) {
+         #print "[DEBUG] all fields matched [$skip]\n";
+         last;
+      }
+   }
+   if ($skip != $csv_header_count) { # Not all fields have matched, it is
+                                     # NOT blacklisted, we keep results
+      push @$output, $flat;
+   }
 
-   return $self->iter($page, $cb, $state, $lookup);
+   return 1;
 }
 
 1;

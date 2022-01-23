@@ -14,38 +14,42 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state argument) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | merge category:vulnscan ip:$ip
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $argument) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $argument) or return;
+   # Keep original results:
+   push @$output, $flat;
 
-   my $cb = sub {
-      my ($this, $state, $new, $argument) = @_;
-
-      # Update where clause with placeholder values
-      my $copy = $argument;
-      while ($copy =~
-         s{([\w\.]+)\s*:\s*\$([\w\.]+)}{$1:@{[$self->value($this, $2)]}}) {
-         #$self->log->debug("1[$1] 2[$2] value[".$self->value($this, $2)."]");
+   my $ao_cb = sub {
+      my ($results) = @_;
+      if (defined($results->{count}) && $results->{count} > 0) {
+         # Merge new results:
+         #$self->log->info("merging");
+         my $flats = $self->flatten($results->{results});
+         #print Data::Dumper::Dumper($flats)."\n";
+         #push @$output, @{$self->flatten($results->{results})};
+         push @$output, @$flats;
       }
-      my $this_r = $self->search($copy, 1, 1) or return;
-      if ($this_r->{count} > 0) {  # Check only first page of results.
-         # Merge only first result from first page.
-         my %new = ( %$this, %{$this_r->{results}[0]} );
-         push @$new, \%new;
-      }
-
-      return 1;
    };
 
-   return $self->iter($page, $cb, $state, $argument);
+   # Update place holders with found input values:
+   my $merges = $self->placeholder($args, $flat);
+
+   for my $merge (@$merges) {
+      $self->log->verbose("merge[$merge]");
+      $self->ao->search($merge, [ { page => 1 } ], $ao_cb);
+   }
+
+   return 1;
 }
 
 1;

@@ -14,27 +14,22 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | count
+#
+sub process {
    my $self = shift;
-   my ($page, $state) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
+   $state->{count}{count}++;
+   push @$output, { count => $state->{count}{count} };
 
-   my $cb = sub {
-      my ($this, $state, $new) = @_;
-
-      $state->{count}{count}++;
-      $new->[0] = { count => $state->{count}{count} };
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state);
+   return 1;
 }
 
 1;

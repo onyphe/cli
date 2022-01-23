@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state) ],
+         process => [ qw(flat state args output) ],
       },
       require_modules => {
          'Metabrik::Network::Address' => [ ],
@@ -29,60 +29,54 @@ sub brik_properties {
 #
 # | splitsubnet
 #
-sub run {
+sub process {
    my $self = shift;
-   my ($page, $state) = @_;
-
-   $self->brik_help_run_undef_arg('run', $page) or return;
+   my ($flat, $state, $args, $output) = @_;
 
    my $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
 
-   my $cb = sub {
-      my ($this, $state, $new, $field) = @_;
+   my $parsed = $self->parse_v2($args);
+   my $field = $parsed->{0} || 'subnet';
 
-      my $value = $self->value_as_array($this, $field) or return 1;
+   my $values = $self->value($flat, $field) or return 1;
 
-      for my $v (@$value) {
-         #$self->log->info("splitting subnet[$v]");
-         my ($subnet, $cidr) = $v =~ m{^([^/]+)/(\d+)$};
+   for my $v (@$values) {
+      my ($subnet, $cidr) = $v =~ m{^([^/]+)/(\d+)$};
 
-         if ($na->is_ipv4($subnet)) {
-            # Don't touch anything if CIDR is at least /16:
-            if ($cidr >= 16) {
-               my $copy = $self->clone($this);
-               $copy->{$field} = $v;  # subnet is never an ARRAY
-               #$self->log->info("old subnet[$v]");
-               push @$new, $copy;
-            }
-            # If not, split into other subnets:
-            else {
-               if ($na->is_ipv4($subnet)) {
-                  my $count = $na->count_ipv4($subnet.'/'.$cidr);
-                  my $chunks = $count / 65536;  # Chunk by X number of /16
-                  my $this_subnet = $subnet.'/16';
-                  for (1..$chunks) {
-                     my $copy = $self->clone($this);
-                     $copy->{$field} = $this_subnet;  # subnet is never an ARRAY
-                     #$self->log->info("new subnet[$this_subnet]");
-                     push @$new, $copy;
-                     # Prepare for next round:
-                     my $last = $na->ipv4_last_address($this_subnet);
-                     my $last_int = $na->ipv4_to_integer($last) + 1;
-                     $this_subnet = $na->integer_to_ipv4($last_int).'/16';
-                  }
+      if ($na->is_ipv4($subnet)) {
+         # Don't touch anything if CIDR is at least /16:
+         if ($cidr >= 16) {
+            my $copy = $self->clone($flat);
+            $copy->{$field} = $v;  # subnet is never an ARRAY
+            #$self->log->info("old subnet[$v]");
+            push @$output, $copy;
+         }
+         # If not, split into other subnets:
+         else {
+            if ($na->is_ipv4($subnet)) {
+               my $count = $na->count_ipv4($subnet.'/'.$cidr);
+               my $chunks = $count / 65536;  # Chunk by X number of /16
+               my $this_subnet = $subnet.'/16';
+               for (1..$chunks) {
+                  my $copy = $self->clone($flat);
+                  $copy->{$field} = $this_subnet;  # subnet is never an ARRAY
+                  #$self->log->info("new subnet[$this_subnet]");
+                  push @$output, $copy;
+                  # Prepare for next round:
+                  my $last = $na->ipv4_last_address($this_subnet);
+                  my $last_int = $na->ipv4_to_integer($last) + 1;
+                  $this_subnet = $na->integer_to_ipv4($last_int).'/16';
                }
             }
          }
-         # IPv6 not handled yet, simply returns original object:
-         else {
-            push @$new, $this;
-         }
       }
+      # IPv6 not handled yet, simply returns original object:
+      else {
+         push @$output, $flat;
+      }
+   }
 
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, 'subnet');
+   return 1;
 }
 
 1;

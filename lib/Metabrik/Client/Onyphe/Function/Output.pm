@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state format) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
@@ -24,26 +24,21 @@ sub brik_properties {
 # | output format=txt dedup=subnet fields=subnet
 # | output format=csv header=ip,domain fields=ip,domain
 #
-sub run {
+sub process {
    my $self = shift;
-   my ($page, $state, $args) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $args) or return;
-
-   my $arg = $self->parse_v2($args);
-   #print Data::Dumper::Dumper($arg)."\n";
-   my $format = $arg->{format};
-   my $fields = $arg->{fields};
-   my $dedup = $arg->{dedup};
-   my $header = $arg->{header};
-
-   $self->brik_help_run_undef_arg('run', $format) or return;
+   my $parsed = $self->parse_v2($args);
+   #print Data::Dumper::Dumper($parsed)."\n";
+   my $format = $parsed->{format};
+   my $fields = $parsed->{fields};
+   my $dedup = $parsed->{dedup};
+   my $header = $parsed->{header};
 
    $format = $format->[0];  # Always single option
 
    if ($format ne 'csv' && $format ne 'txt') {
-      return $self->log->error("function_output: invalid output format [$format]");
+      return $self->log->error("output: invalid output format [$format]");
    }
 
    if (defined($fields)) {
@@ -54,66 +49,56 @@ sub run {
       $dedup = { map { $_ => 1 } @$dedup };
    }
 
-   my $cb = sub {
-      my ($this, $state, $new, $format, $fields, $dedup) = @_;
-
-      my $doc = $self->flatten($this);
-      #print Data::Dumper::Dumper($doc)."\n";
-
-      my @this_line = ();
-      for my $k (sort { $a cmp $b } keys %$doc) {
-         # Only keep wanted fields when given, otherwise use all fields:
-         if (defined($fields)) {
-            next unless exists($fields->{$k});
-            #print "K[$k]\n";
-         }
-
-         # Make it always an ARRAY:
-         my $ary = (ref($doc->{$k}) eq 'ARRAY') ? $doc->{$k} : [ $doc->{$k} ];
-
-         # Perform action against all elements of the ARRAY:
-         for my $e (@$ary) {
-            # Build dedup key when given:
-            my $key = '';
-            if (defined($dedup) && exists($dedup->{$k})) {
-               $key .= "$k:$e-";
-            }
-
-            # Skip when deduped:
-            #print "DEDUP[$key]\n";
-            next if $state->{output}{dedup}{$key};
-
-            push @this_line, $e;
-
-            # Update dedup cache:
-            if (length($key) && !exists($state->{output}{dedup}{$key})) {
-               $state->{output}{dedup}{$key}++
-            }
-         }
+   my @this_line = ();
+   for my $k (sort { $a cmp $b } @{$self->fields($flat)}) {
+      # Only keep wanted fields when given, otherwise use all fields:
+      if (defined($fields)) {
+         next unless exists($fields->{$k});
+         #print "K[$k]\n";
       }
 
-      #print Data::Dumper::Dumper(\@this_line)."\n";
+      my $values = $self->value($flat, $k);
 
-      if (@this_line) {
-         if ($format eq 'csv' && defined($header) && !$state->{output}{header_print}) {
-            my $hdr = join('","', @$header);
-            print "\"$hdr\"\n";
-            $state->{output}{header_print}++;
+      # Perform action against all elements of the ARRAY:
+      for my $v (@$values) {
+         # Build dedup key when given:
+         my $key = '';
+         if (defined($dedup) && exists($dedup->{$k})) {
+            $key .= "$k:$v-";
          }
-         if ($format eq 'csv') {
-            my $line = join('","', @this_line);
-            print "\"$line\"\n";
-         }
-         elsif ($format eq 'txt') {
-            my $line = join(',', @this_line);
-            print "$line\n";
+
+         # Skip when deduped:
+         #print "DEDUP[$key]\n";
+         next if $state->{output}{dedup}{$key};
+
+         push @this_line, $v;
+
+         # Update dedup cache:
+         if (length($key) && !exists($state->{output}{dedup}{$key})) {
+            $state->{output}{dedup}{$key}++
          }
       }
+   }
 
-      return 1;
-   };
+   #print Data::Dumper::Dumper(\@this_line)."\n";
 
-   return $self->iter($page, $cb, $state, $format, $fields, $dedup);
+   if (@this_line) {
+      if ($format eq 'csv' && defined($header) && !$state->{output}{header_print}) {
+         my $hdr = join('","', @$header);
+         print "\"$hdr\"\n";
+         $state->{output}{header_print}++;
+      }
+      if ($format eq 'csv') {
+         my $line = join('","', @this_line);
+         print "\"$line\"\n";
+      }
+      elsif ($format eq 'txt') {
+         my $line = join(',', @this_line);
+         print "$line\n";
+      }
+   }
+
+   return 1;
 }
 
 1;

@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state) ],
+         process => [ qw(flat state args output) ],
       },
       require_modules => {
          'Metabrik::Shell::Command' => [ ],
@@ -30,41 +30,36 @@ sub brik_properties {
    };
 }
 
-sub run {
+#
+# | whois
+#
+sub process {
    my $self = shift;
-   my ($page, $state) = @_;
-
-   $self->brik_help_run_undef_arg('run', $page) or return;
+   my ($flat, $state, $args, $output) = @_;
 
    my $sc = Metabrik::Shell::Command->new_from_brik_init($self) or return;
 
-   my $cb = sub {
-      my ($this, $state, $new) = @_;
+   my $ip = $flat->{ip};
+   my $domains = $self->value($flat, 'domain');
+   for my $domain (@$domains) {
+      my $target = $domain || $ip;
+      next if $state->{whois}{$domain};
 
-      my $ip = $this->{ip};
-      my $domain = $self->value_as_array($this, 'domain');
-      for my $this_domain (@$domain) {
-         my $target = $this_domain || $ip;
-         next if $state->{whois}{$this_domain};
+      $state->{whois}{$target}++;
 
-         $state->{whois}{$target}++;
+      my $output = "/tmp/$target.whois";
 
-         my $output = "/tmp/$target.whois";
+      my $cmd = "timeout --kill-after=20s --signal=QUIT 15s whois $target";
 
-         my $cmd = "timeout --kill-after=20s --signal=QUIT 15s whois $target";
+      $self->log->verbose("output[$output]");
+      $self->log->verbose("cmd[$cmd]");
 
-         $self->log->verbose("output[$output]");
-         $self->log->verbose("cmd[$cmd]");
+      $self->log->info("launching whois for [$target], output [$output]");
 
-         $self->log->info("launching whois for [$target], output [$output]");
+      system("$cmd > $output 2> /dev/null &");
+   }
 
-         system("$cmd > $output 2> /dev/null &");
-      }
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state);
+   return 1;
 }
 
 1;

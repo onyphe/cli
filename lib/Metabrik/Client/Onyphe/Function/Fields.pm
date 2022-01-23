@@ -42,7 +42,7 @@ sub process {
       $self->delete($flat, $k) if !$keep->{$k};
    }
 
-   push @$output, $flat;
+   push @$output, $flat if %$flat > 0;
 
    return 1;
 }

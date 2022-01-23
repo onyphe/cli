@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state) ],
+         process => [ qw(flat state args output) ],
       },
       require_modules => {
          'Metabrik::Shell::Command' => [ ],
@@ -30,50 +30,45 @@ sub brik_properties {
    };
 }
 
-sub run {
+#
+# | httpshot
+#
+sub process {
    my $self = shift;
-   my ($page, $state) = @_;
-
-   $self->brik_help_run_undef_arg('run', $page) or return;
+   my ($flat, $state, $args, $output) = @_;
 
    my $sc = Metabrik::Shell::Command->new_from_brik_init($self) or return;
 
-   my $cb = sub {
-      my ($this, $state, $new) = @_;
+   my $ip = $flat->{ip};
+   my $port = $flat->{port};
+   my $forward = $flat->{forward} || '';
+   my $tls = $flat->{tls};
+   my $path = $flat->{url} || '/';
 
-      my $ip = $this->{ip};
-      my $port = $this->{port};
-      my $forward = $this->{forward} || '';
-      my $tls = $this->{tls};
-      my $path = $this->{url} || '/';
+   my $url = ($tls && $tls eq 'true') ? 'https' : 'http';
+   if (length($forward)) {
+      $url .= "://$forward";
+   }
+   else {
+      $url .= "://$ip";
+   }
+   $url .= ":$port".$path;
 
-      my $url = ($tls && $tls eq 'true') ? 'https' : 'http';
-      if (length($forward)) {
-         $url .= "://$forward";
-      }
-      else {
-         $url .= "://$ip";
-      }
-      $url .= ":$port".$path;
+   my $copy = $url;
+   $copy =~ s{[:/]}{_}g;
+   my $jpg = "/tmp/http-shot-$copy.jpg";
 
-      my $copy = $url;
-      $copy =~ s{[:/]}{_}g;
-      my $output = "/tmp/http-shot-$copy.jpg";
+   my $cmd = "timeout --kill-after=20s --signal=QUIT 15s cutycapt --insecure --delay=5000 --max-wait=10000 --private-browsing=on --java=off --javascript=on --url=$url --out=$jpg --min-width=1024 --min-height=768";
 
-      my $cmd = "timeout --kill-after=20s --signal=QUIT 15s cutycapt --insecure --delay=5000 --max-wait=10000 --private-browsing=on --java=off --javascript=on --url=$url --out=$output --min-width=1024 --min-height=768";
+   $self->log->verbose("url[$url]");
+   $self->log->verbose("jpg[$jpg]");
+   $self->log->verbose("cmd[$cmd]");
 
-      $self->log->verbose("url[$url]");
-      $self->log->verbose("output[$output]");
-      $self->log->verbose("cmd[$cmd]");
+   $self->log->info("taking screenshot for [$url], output [$jpg]");
 
-      $self->log->info("taking screenshot for [$url], output [$output]");
+   system("$cmd 2> /dev/null &");
 
-      system("$cmd 2> /dev/null &");
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state);
+   return 1;
 }
 
 1;

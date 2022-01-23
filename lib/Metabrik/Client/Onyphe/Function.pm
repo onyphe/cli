@@ -33,8 +33,10 @@ sub brik_properties {
          unflatten => [ qw(flat) ],
          iter => [ qw(page callback) ],
          return => [ qw(page new state|OPTIONAL) ],
+         parse_v2 => [ qw(arguments) ],
       },
       require_modules => {
+         'Data::Dumper' => [ ],
          'Text::ParseWords' => [ ],
          'Storable' => [ qw(dclone) ],
       },
@@ -93,13 +95,20 @@ sub value {
       my $leaf = $split->[1];
       if (defined($leaf)) {
          for (@{$flat->{$root}}) {
-            push @value, $_->{$leaf} if defined($_->{$leaf});
+            if (defined($_->{$leaf})) {
+               my $ary = ref($_->{$leaf}) ? $_->{$leaf} : [ $_->{$leaf} ];
+               push @value, @$ary;
+            }
          }
       }
    }
    # Handle standard fields:
    else {
-      push @value, $flat->{$field} if defined($flat->{$field});
+      #push @value, $flat->{$field} if defined($flat->{$field});
+      if (defined($flat->{$field})) {
+         my $ary = ref($flat->{$field}) eq 'ARRAY' ? $flat->{$field} : [ $flat->{$field} ];
+         push @value, @$ary;
+      }
    }
 
    return @value ? \@value : undef;
@@ -129,6 +138,31 @@ sub fields {
    }
 
    return \@fields;
+}
+
+sub values {
+   my $self = shift;
+   my ($flat) = @_;
+
+   $self->brik_help_run_undef_arg('values', $flat) or return;
+
+   my @values = ();
+   my $fields = $self->fields($flat);
+
+   for (@$fields) {
+      push @values, $flat->{$_};
+   }
+
+   return \@values;
+}
+
+sub dumper {
+   my $self = shift;
+   my ($arg) = @_;
+
+   $self->brik_help_run_undef_arg('dumper', $arg) or return;
+
+   return Data::Dumper::Dumper($arg)."\n";
 }
 
 #
@@ -193,28 +227,34 @@ sub clone {
 #
 sub flatten {
    my $self = shift;
-   my ($doc) = @_;
+   my ($docs) = @_;
 
-   $self->brik_help_run_undef_arg('flatten', $doc) or return;
+   $self->brik_help_run_undef_arg('flatten', $docs) or return;
 
-   my $new = {};
-   my $sub; $sub = sub {
-      my ($doc, $field) = @_;
+   $docs = ref($docs) eq 'ARRAY' ? $docs : [ $docs ];
 
-      for my $k (keys %$doc) {
-         my $this_field = defined($field) ? "$field.$k" : $k;
-         if (ref($doc->{$k}) eq 'HASH') {
-            $sub->($doc->{$k}, $this_field);
+   my @new = ();
+   for my $doc (@$docs) {
+      my $new = {};
+      my $sub; $sub = sub {
+         my ($doc, $field) = @_;
+
+         for my $k (keys %$doc) {
+            my $this_field = defined($field) ? "$field.$k" : $k;
+            if (ref($doc->{$k}) eq 'HASH') {
+               $sub->($doc->{$k}, $this_field);
+            }
+            else {
+               $new->{$this_field} = $doc->{$k};
+            }
          }
-         else {
-            $new->{$this_field} = $doc->{$k};
-         }
-      }
 
-      return $new;
-   };
+         return $new;
+      };
+      push @new, $sub->($doc);
+   }
 
-   return $sub->($doc);
+   return \@new;
 }
 
 sub unflatten {
@@ -274,12 +314,23 @@ sub run_v2 {
    my $self = shift;
    my ($page, $state, $args) = @_;
 
+   #my $count = @{$page->{results}};
+   #$self->log->info("run_v2: processing count [$count]");
+
+   # Put in flat format to make it easier to use in functions:
+   my $flats = $self->flatten($page->{results});
+   #$count = @$flats;
+   #$self->log->info("run_v2: flattened count results [$count]");
+
    my @output = ();
-   for my $doc (@{$page->{results}}) {
-      # Put in flat format to make it easier to use in functions:
-      my $flat = $self->flatten($doc);
+   for my $flat (@$flats) {
       $self->process($flat, $state, $args, \@output);
+      #$count = @output;
+      #$self->log->info("run_v2: processing flat, current output count [$count]");
    }
+
+   #$count = @output;
+   #$self->log->info("run_v2: output count [$count]");
 
    # Put back in doc format so we can display on STDOUT in original format:
    my $output = $self->unflatten(\@output);

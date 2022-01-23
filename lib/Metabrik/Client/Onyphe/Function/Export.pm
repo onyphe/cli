@@ -14,54 +14,39 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state export) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# NOTE: currently doesn't work because we cannot call 2 times api_streaming().
+#
+# | export category:vulnscan ip:$ip
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $export) = @_;
-
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $export) or return;
+   my ($flat, $state, $args, $output) = @_;
 
    my $ao_cb = sub {
-      my ($results, $new) = @_;
-      if (defined($results->{results}) && $results->{results} > 0) {
+      my ($results) = @_;
+      if (defined($results->{count}) && $results->{count} > 0) {
          # Keep this page results if matches were found.
-         push @$new, @{$results->{results}};
+         my @flats = ();
+         push @flats, $self->flatten($_) for (@{$results->{results}});
+         push @$output, @flats;
       }
    };
 
-   my $cb = sub {
-      my ($this, $state, $new, $export) = @_;
+   # Update place holders with found input values:
+   my $exports = $self->placeholder($args, $flat);
 
-      my $copy = $export;
-      my (@holders) = $copy =~ m{[\w\.]+\s*:\s*\$([\w\.]+)}g;
+   for my $export (@$exports) {
+      $self->log->verbose("export[$export]");
+      $self->ao->export($export, undef, $ao_cb);
+   }
 
-      # Update where clause with placeholder values
-      my %exports = ();
-      for my $holder (@holders) {
-         my $values = $self->value_as_array($this, $holder);
-         for my $value (@$values) {
-            while ($copy =~
-               s{(\S+)\s*:\s*\$$holder}{$1:$value}) {
-            }
-            $exports{$copy}++;  # Make them unique
-         }
-      }
-
-      my @exports = keys %exports;
-      for my $export (@exports) {
-         $self->log->verbose("export[$export]");
-         $self->ao->export($export, undef, $ao_cb, $new);
-      }
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $export);
+   return 1;
 }
 
 1;

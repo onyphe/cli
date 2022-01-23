@@ -14,40 +14,38 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state field) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | dedup domain
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $field) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $field) or return;
+   my $parsed = $self->parse_v2($args);
+   my $field = $parsed->{0} or return $self->log->error("dedup: need argument");
 
-   my $cb = sub {
-      my ($this, $state, $new, $field) = @_;
+   my $values = $self->value($flat, $field) or return 1;
 
-      my $value = $self->value_as_array($this, $field) or return 1;
-
-      # Results are ordered in latest time first,
-      # thus we keep the freshest result.
-      my $keep = 0;
-      for my $v (@$value) {
-         if (! exists($state->{dedup}{$v})) {
-            $state->{dedup}{$v}++;
-            $keep = 1;
-         }
+   # Results are ordered in latest time first,
+   # thus we keep the freshest result.
+   my $keep = 0;
+   for my $v (@$values) {
+      if (! exists($state->{dedup}{$v})) {
+         $state->{dedup}{$v}++;
+         $keep = 1;
       }
-      if ($keep) {
-         push @$new, $this;
-      }
+   }
 
-      return 1;
-   };
+   if ($keep) {
+      push @$output, $flat;
+   }
 
-   return $self->iter($page, $cb, $state, $field);
+   return 1;
 }
 
 1;

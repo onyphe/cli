@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state field) ],
+         process => [ qw(flat state args output) ],
       },
       attributes_default => {
          last => 1,
@@ -27,28 +27,20 @@ sub brik_properties {
    };
 }
 
-sub run {
+sub process {
    my $self = shift;
-   my ($page, $state) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
+   my $pie = Chart::Plotly::Trace::Pie->new(
+      labels => $self->fields($flat),
+      values => $self->values($flat),
+   );
 
-   my $cb = sub {
-      my ($this, $state, $new) = @_;
+   HTML::Show::show(
+      Chart::Plotly::render_full_html(data => [$pie]),
+   );
 
-      my $pie = Chart::Plotly::Trace::Pie->new(
-         labels => [ keys %$this ],
-         values => [ values %$this ],
-      );
-
-      HTML::Show::show(
-         Chart::Plotly::render_full_html(data => [$pie]),
-      );
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state);
+   return 1;
 }
 
 1;

@@ -14,54 +14,36 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state search) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | search category:vulnscan -exists:cve ip:$ip
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $search) = @_;
-
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $search) or return;
+   my ($flat, $state, $args, $output) = @_;
 
    my $ao_cb = sub {
-      my ($results, $new) = @_;
+      my ($results) = @_;
       if (defined($results->{count}) && $results->{count} > 0) {
-         # Keep this page results if matches were found.
-         push @$new, @{$results->{results}};
+         # Keep this page results if matches were found:
+         my $flats = $self->flatten($results->{results});
+         push @$output, @$flats;
       }
    };
 
-   my $cb = sub {
-      my ($this, $state, $new, $search) = @_;
+   # Update place holders with found input values:
+   my $searches = $self->placeholder($args, $flat);
 
-      my $copy = $search;
-      my (@holders) = $copy =~ m{[\w\.]+\s*:\s*\$([\w\.]+)}g;
+   for my $search (@$searches) {
+      $self->log->verbose("search[$search]");
+      $self->ao->search($search, [ { page => 1 } ], $ao_cb);
+   }
 
-      # Update where clause with placeholder values
-      my %searches = ();
-      for my $holder (@holders) {
-         my $values = $self->value_as_array($this, $holder);
-         for my $value (@$values) {
-            while ($copy =~
-               s{(\S+)\s*:\s*\$$holder}{$1:$value}) {
-            }
-            $searches{$copy}++;  # Make them unique
-         }
-      }
-
-      my @searches = keys %searches;
-      for my $search (@searches) {
-         $self->log->verbose("search[$search]");
-         $self->ao->search($search, [ { page => 1 } ], $ao_cb, $new);
-      }
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $search);
+   return 1;
 }
 
 1;

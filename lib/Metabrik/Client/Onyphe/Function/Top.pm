@@ -14,50 +14,45 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state field count|OPTIONAL) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
 
-sub run {
+#
+# | top domain
+#
+sub process {
    my $self = shift;
-   my ($page, $state, $args) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $args) or return;
+   my $parsed = $self->parse_v2($args);
+   my $field = $parsed->{0};
+   my $count = $parsed->{1} || 10;
 
-   my $arg = $self->parse($args);
-   my $field = $arg->[0];
-   my $count = $arg->[1] || 10;
+   my $values = $self->value($flat, $field) or return 1;
 
-   $self->brik_help_run_undef_arg('run', $field) or return;
+   for my $v (@$values) {
+      $state->{top}{$field}{$v}++;
+   }
 
-   my $cb = sub {
-      my ($this, $state, $new, $field, $count) = @_;
+   # Get current state so we update it:
+   my $h = $state->{top}{$field};
 
-      my $value = $self->value_as_array($this, $field) or return 1;
+   # Sort hash by value, highest first and stop at $count:
+   my $top = 0;
+   my $sort = {};
+   for my $k (sort { $h->{$b} <=> $h->{$a} } keys %$h) {
+      $sort->{$field}{$k} = $h->{$k};
+      last if ++$top == $count;
+   }
 
-      for my $v (@$value) {
-         $state->{top}{$v}++;
-      }
+   #$self->log->info($self->dumper($state));
 
-      my $h = $state->{top};
+   $state->{top} = $sort;
+   $output->[0] = $state->{top};
 
-      # Sort hash by value, highest first and stop at $count:
-      my $top = 0;
-      my $sort = {};
-      for my $k (sort { $h->{$b} <=> $h->{$a} } keys %$h) {
-         $sort->{$k} = $h->{$k};
-         last if ++$top == $count;
-      }
-
-      $state->{top} = $sort;
-      $new->[0] = $state->{top};
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $field, $count);
+   return 1;
 }
 
 1;

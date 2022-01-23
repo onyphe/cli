@@ -14,7 +14,7 @@ sub brik_properties {
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
       commands => {
-         run => [ qw(page state field) ],
+         process => [ qw(flat state args output) ],
       },
    };
 }
@@ -28,33 +28,22 @@ sub brik_properties {
 #
 # | expand domain
 #
-sub run {
+sub process {
    my $self = shift;
-   my ($page, $state, $args) = @_;
+   my ($flat, $state, $args, $output) = @_;
 
-   $self->brik_help_run_undef_arg('run', $page) or return;
-   $self->brik_help_run_undef_arg('run', $args) or return;
+   my $parsed = $self->parse_v2($args);
+   my $field = $parsed->{0};
 
-   my $arg = $self->parse($args);
-   my $field = $arg->[0];
+   my $values = $self->value($flat, $field) or return 1;
 
-   $self->brik_help_run_undef_arg('run', $field) or return;
+   for my $v (@$values) {
+      my $copy = $self->clone($flat);
+      $copy->{$field} = $v;
+      push @$output, $copy;
+   }
 
-   my $cb = sub {
-      my ($this, $state, $new, $field) = @_;
-
-      my $value = $self->value_as_array($this, $field) or return 1;
-
-      for my $v (@$value) {
-         my $copy = $self->clone($this);
-         $copy->{$field} = [ $v ];
-         push @$new, $copy;
-      }
-
-      return 1;
-   };
-
-   return $self->iter($page, $cb, $state, $field);
+   return 1;
 }
 
 1;
