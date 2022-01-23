@@ -35,7 +35,7 @@ sub brik_properties {
 #
 # echo ip > /tmp/ip.csv
 # echo '13.208.0.0/16' >> /tmp/ip.csv
-# | whitelist /tmp/domain.csv cidr=ip'
+# | whitelist /tmp/ip.csv cidr=ip
 #
 sub process {
    my $self = shift;

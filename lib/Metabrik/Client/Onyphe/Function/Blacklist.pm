@@ -29,7 +29,13 @@ sub brik_properties {
 }
 
 #
+# echo domain > /tmp/domain.csv
+# echo amazonaws.com >> /tmp/domain.csv
+# | blacklist /tmp/domain.csv
 #
+# echo ip > /tmp/ip.csv
+# echo '13.208.0.0/16' >> /tmp/ip.csv
+# | blacklist /tmp/ip.csv cidr=ip'
 #
 sub process {
    my $self = shift;

@@ -104,7 +104,6 @@ sub value {
    }
    # Handle standard fields:
    else {
-      #push @value, $flat->{$field} if defined($flat->{$field});
       if (defined($flat->{$field})) {
          my $ary = ref($flat->{$field}) eq 'ARRAY' ? $flat->{$field} : [ $flat->{$field} ];
          push @value, @$ary;
@@ -314,23 +313,13 @@ sub run_v2 {
    my $self = shift;
    my ($page, $state, $args) = @_;
 
-   #my $count = @{$page->{results}};
-   #$self->log->info("run_v2: processing count [$count]");
-
    # Put in flat format to make it easier to use in functions:
    my $flats = $self->flatten($page->{results});
-   #$count = @$flats;
-   #$self->log->info("run_v2: flattened count results [$count]");
 
    my @output = ();
    for my $flat (@$flats) {
       $self->process($flat, $state, $args, \@output);
-      #$count = @output;
-      #$self->log->info("run_v2: processing flat, current output count [$count]");
    }
-
-   #$count = @output;
-   #$self->log->info("run_v2: output count [$count]");
 
    # Put back in doc format so we can display on STDOUT in original format:
    my $output = $self->unflatten(\@output);
