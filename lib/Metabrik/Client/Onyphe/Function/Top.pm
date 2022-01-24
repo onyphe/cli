@@ -13,6 +13,9 @@ sub brik_properties {
       tags => [ qw(client onyphe) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
+      attributes_default => {
+         no_unflatten => 1,
+      },
       commands => {
          process => [ qw(flat state args output) ],
       },
@@ -33,17 +36,17 @@ sub process {
    my $values = $self->value($flat, $field) or return 1;
 
    for my $v (@$values) {
-      $state->{top}{$field}{$v}++;
+      $state->{top}{$v}++;
    }
 
    # Get current state so we update it:
-   my $h = $state->{top}{$field};
+   my $h = $state->{top};
 
    # Sort hash by value, highest first and stop at $count:
    my $top = 0;
    my $sort = {};
    for my $k (sort { $h->{$b} <=> $h->{$a} } keys %$h) {
-      $sort->{$field}{$k} = $h->{$k};
+      $sort->{$k} = $h->{$k};
       last if ++$top == $count;
    }
 

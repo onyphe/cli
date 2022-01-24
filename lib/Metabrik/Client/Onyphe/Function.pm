@@ -18,10 +18,12 @@ sub brik_properties {
       attributes => {
          nested => [ qw(fields) ],
          last => [ qw(0|1) ],
+         no_unflatten => [ qw(0|1) ],
       },
       attributes_default => {
          nested => [ qw(app.http.component app.http.header alert) ],
          last => 0,
+         no_unflatten => 0,
       },
       commands => {
          is_nested => [ qw(field) ],
@@ -321,8 +323,10 @@ sub run_v2 {
       $self->process($flat, $state, $args, \@output);
    }
 
-   # Put back in doc format so we can display on STDOUT in original format:
-   my $output = $self->unflatten(\@output);
+   # Put back in doc format so we can display on STDOUT in original format,
+   # except when not wanted:
+   my $output = \@output;
+   $output = $self->unflatten(\@output) unless $self->no_unflatten;
 
    return $self->return($page, $output);
 }
