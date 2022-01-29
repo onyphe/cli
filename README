@@ -11,7 +11,7 @@ INSTALLATION
 
   $ sudo apt-get install -y build-essential less cpanminus libreadline-dev \
      coreutils libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev \
-     procps aptitude liblwp-protocol-https-perl perl-doc
+     procps aptitude liblwp-protocol-https-perl perl-doc git
 
   B/ Install Metabrik and its Repository
 
