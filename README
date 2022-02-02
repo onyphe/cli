@@ -9,9 +9,7 @@ INSTALLATION
 
   A/ Install all dependencies (Ubuntu/Debian/Kali systems)
 
-  $ sudo apt-get install -y build-essential less cpanminus libreadline-dev \
-     coreutils libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev \
-     procps aptitude liblwp-protocol-https-perl perl-doc
+  $ sudo apt-get install -y build-essential less cpanminus libreadline-dev coreutils libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev procps aptitude liblwp-protocol-https-perl perl-doc
 
   B/ Install Metabrik and its Repository
 
@@ -28,8 +26,7 @@ INSTALLATION
 
   D/ Install client::onyphe Brik
 
-  $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe")'
+  $ sudo perl -MMetabrik::Core::Context -e 'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe")'
 
   E/ Set your API key in the configuration file
 
@@ -37,8 +34,7 @@ INSTALLATION
 
   F/ Install custom functions (example: httpshot)
 
-  $ sudo perl -MMetabrik::Core::Context -e \
-     'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe::function::httpshot")'
+  $ sudo perl -MMetabrik::Core::Context -e 'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe::function::httpshot")'
 
   Current list of custom functions:
   - addcount
@@ -105,9 +101,7 @@ EXAMPLES
   # Execute a where clause to return results that match criterias from another query
   # Here, we want to find modbus devices which also have a Web interface.
   # !!! WARNING: may consume up to 11,000 credits.
-  $ onyphe -maxpage 1000 -search \
-      'category:datascan protocol:modbus -dayago:1 \
-     | search category:datascan protocol:http ip:$ip'
+  $ onyphe -maxpage 1000 -search 'category:datascan protocol:modbus -dayago:1 | search category:datascan protocol:http ip:$ip'
 
   # Fetch all results
   $ onyphe -export 'category:datascan protocol:mongo' > mongo.json
@@ -123,9 +117,10 @@ EXAMPLES
   $ onyphe -export 'category:geoloc organization:"Global Layer B.V." | top country | piechart'
 
   # Uncloak .onion servers:
-  onyphe -apikeepalive 1 -export 'category:onionscan -exists:app.http.bodymd5 \
-     | where category:datascan app.http.bodymd5:$app.http.bodymd5 \
-     | fields ip,domain,protocol,app.http.bodymd5,classification'
+  onyphe -apikeepalive 1 -export 'category:onionscan -exists:app.http.bodymd5 | where category:datascan app.http.bodymd5:$app.http.bodymd5 | fields ip,domain,protocol,app.http.bodymd5,classification'
+
+  # Uncloak CloudFlare-hosted servers:
+  onyphe -apikeepalive 1 -export 'category:datascan ?organization:CLOUDFLARENET ?geolocus.netname:CLOUDFLARENET -exists:fingerprint.sha1 | search category:datascan !organization:CLOUDFLARENET !geolocus.netname:CLOUDFLARENET fingerprint.sha1:$fingerprint.sha1'
 
   # Execute a custom script
   # Note: myscript.pl will take the JSON document as input from a file script must read:
