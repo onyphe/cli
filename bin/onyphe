@@ -106,6 +106,7 @@ elsif ($lopts{summary}) {
    $cli->summary($arg, $lopts{summary}) or $cli->log->fatal("summary: aborted");
 }
 elsif ($lopts{discovery}) {
+   $cli->apikeepalive(1);  # Activate by default for this API
    $cli->discovery($arg) or $cli->log->fatal("discovery: aborted");
 }
 elsif ($lopts{alert}) {
