@@ -7,7 +7,7 @@ package Metabrik::Api::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '3.00';
+our $VERSION = '3.01';
 
 use base qw(Metabrik::Client::Rest);
 

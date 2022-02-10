@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+3.01
+   - ignore undefined fields from client::onyphe::function::* to avoir displaying warnings
+
 3.00 Mon 24 Jan 14:43:11 CET 2022
    - nearly complete rewrite with full support for all APIs
    - simplified function development scheme
