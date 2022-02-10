@@ -29,7 +29,8 @@ sub process {
    my $parsed = $self->parse_v2($args);
    my $field = $parsed->{0} or return $self->log->error("dedup: need argument");
 
-   my $values = $self->value($flat, $field) or return 1;
+   my $values = $self->value($flat, $field);
+   return 1 unless defined($values);
 
    # Results are ordered in latest time first,
    # thus we keep the freshest result.

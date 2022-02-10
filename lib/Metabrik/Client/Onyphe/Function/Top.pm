@@ -33,7 +33,8 @@ sub process {
    my $field = $parsed->{0};
    my $count = $parsed->{1} || 10;
 
-   my $values = $self->value($flat, $field) or return 1;
+   my $values = $self->value($flat, $field);
+   return 1 unless defined($values);
 
    for my $v (@$values) {
       $state->{top}{$v}++;

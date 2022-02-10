@@ -29,10 +29,10 @@ sub process {
    my $parsed = $self->parse_v2($args);
    my $field = $parsed->{0} or return $self->log->error("uniq: need argument");
 
-   my $value = $self->value($flat, $field)
-      or return $self->log->error("uniq: field not found: $field");
+   my $values = $self->value($flat, $field);
+   return 1 unless defined($values);
 
-   for my $v (@$value) {
+   for my $v (@$values) {
       next if $state->{uniq}{$v};
       $state->{uniq}{$v}++;
       push @$output, { $field => $v };

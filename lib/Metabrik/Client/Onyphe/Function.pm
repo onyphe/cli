@@ -363,7 +363,7 @@ sub placeholder {
    my $copy = $query;
    my (@holders) = $query =~ m{[\w\.]+\s*:\s*\$([\w\.]+)}g;
 
-   # Update where clause with placeholder values
+   # Update search clause with placeholder values
    my %searches = ();
    for my $holder (@holders) {
       my $values = $self->value($flat, $holder);

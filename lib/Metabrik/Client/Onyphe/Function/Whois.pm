@@ -40,7 +40,11 @@ sub process {
    my $sc = Metabrik::Shell::Command->new_from_brik_init($self) or return;
 
    my $ip = $flat->{ip};
+   return 1 unless defined($ip);
+
    my $domains = $self->value($flat, 'domain');
+   return 1 unless defined($domains);
+
    for my $domain (@$domains) {
       my $target = $domain || $ip;
       next if $state->{whois}{$domain};
