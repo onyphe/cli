@@ -28,7 +28,7 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    #print Data::Dumper::Dumper($parsed)."\n";
    my $format = $parsed->{format};
    my $fields = $parsed->{fields};

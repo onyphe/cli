@@ -98,7 +98,7 @@ EXAMPLES
   # Save Mirai threatlist information from yesterday results
   $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' > mirai.json
 
-  # Execute a where clause to return results that match criterias from another query
+  # Execute a corelation search to return results that match criterias from another query
   # Here, we want to find modbus devices which also have a Web interface.
   # !!! WARNING: may consume up to 11,000 credits.
   $ onyphe -maxpage 1000 -search 'category:datascan protocol:modbus -dayago:1 | search category:datascan protocol:http ip:$ip'

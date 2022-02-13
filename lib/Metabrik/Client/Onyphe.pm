@@ -382,7 +382,7 @@ sub pipeline {
 
          $self->log->verbose("pipeline: function[$function]");
 
-         $page = $function->run_v2($page, $state, $argument);
+         $page = $function->run($page, $state, $argument);
          last unless defined($page);
 
          $last_page = $page;
@@ -405,7 +405,7 @@ sub pipeline {
    $opl_cb->($page, $state);
 
    if (defined($last_function) && defined($last_page)) {
-      $last_function->run_v2($last_page, $last_state, $last_argument);
+      $last_function->run($last_page, $last_state, $last_argument);
    }
 
    return 1;

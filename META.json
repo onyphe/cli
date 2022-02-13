@@ -30,15 +30,15 @@
    "provides" : {
       "Metabrik::Api::Onyphe" : {
          "file" : "lib/Metabrik/Api/Onyphe.pm",
-         "version" : "3.00"
+         "version" : "3.01"
       },
       "Metabrik::Client::Onyphe" : {
          "file" : "lib/Metabrik/Client/Onyphe.pm",
-         "version" : "3.00"
+         "version" : "3.01"
       },
       "Metabrik::Client::Onyphe::Function" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function.pm",
-         "version" : "3.00"
+         "version" : "3.01"
       },
       "Metabrik::Client::Onyphe::Function::Addcount" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Addcount.pm"
@@ -116,6 +116,6 @@
          "http://opensource.org/licenses/BSD-3-Clause"
       ]
    },
-   "version" : "3.00",
+   "version" : "3.01",
    "x_serialization_backend" : "JSON::PP version 4.02"
 }

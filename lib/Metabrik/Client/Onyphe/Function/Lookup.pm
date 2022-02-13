@@ -37,7 +37,7 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    my $lookup = $parsed->{0};
 
    $self->brik_help_run_file_not_found('process', $lookup) or return;

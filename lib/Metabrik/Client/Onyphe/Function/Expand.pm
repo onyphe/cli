@@ -32,7 +32,7 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    my $field = $parsed->{0};
 
    my $values = $self->value($flat, $field);

@@ -1,6 +1,7 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
 3.01
+   - older parse() and run() has been removed, replaced by new run() & parse() commands
    - ignore undefined fields from client::onyphe::function::* to avoir displaying warnings
 
 3.00 Mon 24 Jan 14:43:11 CET 2022

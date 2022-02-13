@@ -26,7 +26,7 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    my $keep = $parsed->{0} || {};
 
    # Build list of fields to be kept from input argument:

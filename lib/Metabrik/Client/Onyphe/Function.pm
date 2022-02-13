@@ -35,7 +35,7 @@ sub brik_properties {
          unflatten => [ qw(flat) ],
          iter => [ qw(page callback) ],
          return => [ qw(page new state|OPTIONAL) ],
-         parse_v2 => [ qw(arguments) ],
+         parse => [ qw(arguments) ],
       },
       require_modules => {
          'Data::Dumper' => [ ],
@@ -311,7 +311,7 @@ sub iter {
    return $self->return($page, \@new);
 }
 
-sub run_v2 {
+sub run {
    my $self = shift;
    my ($page, $state, $args) = @_;
 
@@ -346,15 +346,6 @@ sub return {
    };
 }
 
-sub parse {
-   my $self = shift;
-   my ($arg) = @_;
-
-   my @a = Text::ParseWords::quotewords('\s+', 0, $arg);
-
-   return \@a;
-}
-
 sub placeholder {
    my $self = shift;
    my ($query, $flat) = @_;
@@ -379,7 +370,7 @@ sub placeholder {
 #
 # Will return $arg parsed as usable arguments and also original $arg value:
 #
-sub parse_v2 {
+sub parse {
    my $self = shift;
    my ($args) = @_;
 

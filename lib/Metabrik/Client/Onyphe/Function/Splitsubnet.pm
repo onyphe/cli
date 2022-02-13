@@ -35,7 +35,7 @@ sub process {
 
    my $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    my $field = $parsed->{0} || 'subnet';
 
    my $values = $self->value($flat, $field);

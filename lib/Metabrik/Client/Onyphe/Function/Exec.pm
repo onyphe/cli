@@ -33,7 +33,7 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    my $command = $parsed->{0};
 
    my $jf = Metabrik::File::Json->new_from_brik_init($self) or return;

@@ -41,7 +41,7 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse_v2($args);
+   my $parsed = $self->parse($args);
    my $cidr = $parsed->{cidr} || 'ip';  # Use ip field for subnet matching by default
    my $lookup = $parsed->{0};
 
