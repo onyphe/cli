@@ -23,6 +23,7 @@ sub brik_properties {
       },
       require_modules => {
          'Metabrik::File::Csv' => [ ],
+         'Metabrik::Network::Address' => [ ],
       },
    };
 }
@@ -33,14 +34,25 @@ sub brik_properties {
 #
 # | lookup lookup.csv
 #
+# echo ip,mytags
+# echo 8.8.8.0/24,google
+#
+# | lookup lookup.csv cidr=ip merge=true
+#
 sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
    my $parsed = $self->parse($args);
+   # Use ip field for subnet matching by default
+   my $cidr = (defined($parsed->{cidr}) && $parsed->{cidr}[0]) || 'ip';
+   my $merge = $parsed->{merge} ? 1 : 0;
    my $lookup = $parsed->{0};
 
+   return $self->log->error("lookup: no lookup file given") unless defined($lookup);
    $self->brik_help_run_file_not_found('process', $lookup) or return;
+
+   my $na = Metabrik::Network::Address->new_from_brik_init($self) or return;
 
    my $csv;
    my $csv_header;
@@ -62,15 +74,41 @@ sub process {
 
    # $field is the field to match against (example: domain):
    for my $field (@{$self->fields($flat)}) {
+      # In CIDR match mode, the given field is to be matched against subnet:
+      my $match_field = $field;
+      if ($field eq $cidr) {
+         $match_field = 'subnet';
+      }
+
       # Fetch the value from current result $flat:
-      my $values = $self->value($flat, $field) or next;
+      my $values = $self->value($flat, $match_field) or next;
 
       # Lookup against all fields given in the CSV:
       for my $a (@$values) {
          for my $h (@$csv) {
-            if (exists($h->{$field}) && $h->{$field} eq $a) {
-               #print "[DEBUG] lookup found [$field] value [$a]\n";
-               push @{$flat->{lookup}}, $h;
+            if (exists($h->{$field})) {
+               #print "[DEBUG] lookup [$field] value [$a] hfield [".$h->{$field}."]\n";
+               #print "[DEBUG] cidr [$cidr] lookup found [$field] value [$a]\n";
+               if ($field ne $cidr && $h->{$field} eq $a) {
+                  #print "[DEBUG] lookup found [$field] value [$a]\n";
+                  if ($merge) {
+                     $flat = { %{$self->clone($flat)}, %$h };
+                  }
+                  else {
+                     push @{$flat->{lookup}}, $h;
+                  }
+               }
+               elsif ($field eq $cidr && $na->match($a, $h->{$field})) {
+                  #print "[DEBUG] cidr lookup found [$field] value [$a]\n";
+                  if ($merge) {
+                     my $new_h = $self->clone($h);
+                     delete $new_h->{$cidr};  # Don't merge CIDR matching field
+                     $flat = { %{$self->clone($flat)}, %$new_h };
+                  }
+                  else {
+                     push @{$flat->{lookup}}, $h;
+                  }
+               }
             }
          }
       }

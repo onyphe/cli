@@ -1,7 +1,7 @@
 #
 # $Id$
 #
-package Metabrik::Client::Onyphe::Function::Expand;
+package Metabrik::Client::Onyphe::Function::Flat;
 use strict;
 use warnings;
 
@@ -13,6 +13,9 @@ sub brik_properties {
       tags => [ qw(client onyphe) ],
       author => 'ONYPHE <contact[at]onyphe.io>',
       license => 'http://opensource.org/licenses/BSD-3-Clause',
+      attributes_default => {
+         no_unflatten => 1,
+      },
       commands => {
          process => [ qw(flat state args output) ],
       },
@@ -20,29 +23,14 @@ sub brik_properties {
 }
 
 #
-# When a document has an ARRAY of domains into domain field, we want
-# to create as many documents as the number of domains with same
-# values for other fields:
+# | flat
 #
-# NOTE: currently can only expand on 1 field and does not work on nested fields.
-#
-# | expand domain
-#
+
 sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   my $parsed = $self->parse($args);
-   my $field = $parsed->{0};
-
-   my $values = $self->value($flat, $field);
-   return 1 unless defined($values);
-
-   for my $v (@$values) {
-      my $copy = $self->clone($flat);
-      $copy->{$field} = $v;
-      push @$output, $copy;
-   }
+   push @$output, $flat;
 
    return 1;
 }
@@ -53,7 +41,7 @@ __END__
 
 =head1 NAME
 
-Metabrik::Client::Onyphe::Function::Expand - client::onyphe::function::expand Brik
+Metabrik::Client::Onyphe::Function::Flat - client::onyphe::function::flat Brik
 
 =head1 SYNOPSIS
 

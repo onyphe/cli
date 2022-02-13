@@ -42,9 +42,11 @@ sub process {
    my ($flat, $state, $args, $output) = @_;
 
    my $parsed = $self->parse($args);
-   my $cidr = $parsed->{cidr} || 'ip';  # Use ip field for subnet matching by default
+   # Use ip field for subnet matching by default
+   my $cidr = (defined($parsed->{cidr}) && $parsed->{cidr}[0]) || 'ip';
    my $lookup = $parsed->{0};
 
+   return $self->log->error("allowlist: no lookup file given") unless defined($lookup);
    $self->brik_help_run_file_not_found('process', $lookup) or return;
 
    my $na = Metabrik::Network::Address->new_from_brik_init($self) or return;

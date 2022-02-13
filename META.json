@@ -70,6 +70,9 @@
       "Metabrik::Client::Onyphe::Function::Fields" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Fields.pm"
       },
+      "Metabrik::Client::Onyphe::Function::Flat" : {
+         "file" : "lib/Metabrik/Client/Onyphe/Function/Flat.pm"
+      },
       "Metabrik::Client::Onyphe::Function::Httpshot" : {
          "file" : "lib/Metabrik/Client/Onyphe/Function/Httpshot.pm"
       },

@@ -12,6 +12,7 @@ lib/Metabrik/Client/Onyphe/Function/Exec.pm
 lib/Metabrik/Client/Onyphe/Function/Expand.pm
 lib/Metabrik/Client/Onyphe/Function/Export.pm
 lib/Metabrik/Client/Onyphe/Function/Fields.pm
+lib/Metabrik/Client/Onyphe/Function/Flat.pm
 lib/Metabrik/Client/Onyphe/Function/Httpshot.pm
 lib/Metabrik/Client/Onyphe/Function/Lookup.pm
 lib/Metabrik/Client/Onyphe/Function/Merge.pm

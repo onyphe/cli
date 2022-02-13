@@ -263,10 +263,10 @@ sub unflatten {
    my ($flats) = @_;
 
    $self->brik_help_run_undef_arg('unflatten', $flats) or return;
-   $self->brik_help_run_invalid_arg('unflatten', $flats, 'ARRAY') or return;
 
-   my $docs = [];
+   $flats = ref($flats) eq 'ARRAY' ? $flats : [ $flats ];
 
+   my @new = ();
    for my $flat (@$flats) {
       my $new = {};
 
@@ -289,10 +289,10 @@ sub unflatten {
          }
       }
 
-      push @$docs, $new;
+      push @new, $new;
    }
 
-   return $docs;
+   return \@new;
 }
 
 # Will iterate over all object results. Output of functions will create a new ARRAY
