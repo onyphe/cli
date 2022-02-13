@@ -4,6 +4,7 @@ Revision history for Perl extension Metabrik::Client::Onyphe.
    - new function: flat
    - bugfix: blacklist/allowlist functions: correctly parse cidr parameter
    - bugfix: blacklist/allowlist/lookup functions: check for lookup parameter
+   - bugfix: merge: correctly merges results from first OQL query and second one
    - update: lookup: support for cidr matches
    - older parse() and run() has been removed, replaced by new run() & parse() commands
    - ignore undefined fields from client::onyphe::function::* to avoir displaying warnings

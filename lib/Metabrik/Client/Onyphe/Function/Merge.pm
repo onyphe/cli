@@ -26,18 +26,17 @@ sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
-   # Keep original results:
-   push @$output, $flat;
-
    my $ao_cb = sub {
       my ($results) = @_;
       if (defined($results->{count}) && $results->{count} > 0) {
+         $self->log->info("Has results: ".$results->{count});
          # Merge new results:
-         #$self->log->info("merging");
          my $flats = $self->flatten($results->{results});
-         #print Data::Dumper::Dumper($flats)."\n";
-         #push @$output, @{$self->flatten($results->{results})};
-         push @$output, @$flats;
+         my @new = ();
+         for my $this_flat (@$flats) {
+            push @new, { %{$self->clone($flat)}, %{$self->clone($this_flat)} };
+         }
+         push @$output, @new;
       }
    };
 

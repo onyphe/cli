@@ -106,12 +106,12 @@ EXAMPLES
   # Fetch all results
   $ onyphe -export 'category:datascan protocol:mongo' > mongo.json
 
-  # Lookup a list of IP against an input csv to know if they are threats:
+  # Lookup a list of allowed IP against an input csv to know if they are threats:
   $ cat input.csv
   ip
   1.1.1.1
   2.2.2.2
-  $ onyphe -export 'category:threatlist -exists:subnet | allowlist input.csv cidr=ip'
+  $ onyphe -export 'category:threatlist -exists:subnet | allowlist input.csv'
 
   # Display top countries for an organization:
   $ onyphe -export 'category:geoloc organization:"Global Layer B.V." | top country | piechart'
