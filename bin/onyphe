@@ -19,7 +19,6 @@ my %lopts = (
    onyphe_rc => $ENV{HOME}.'/.onyphe_rc',
    maxpage => 1,
    apiurl => 'https://www.onyphe.io/api/v2',
-   apisize => 10,
    apitrackquery => 0,
    apikeepalive => 0,
    wait => 1,

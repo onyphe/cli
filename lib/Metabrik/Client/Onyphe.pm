@@ -149,7 +149,10 @@ sub search {
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
    for my $page (1..$maxpage) {
+      last if $page > $maxpage;
       $self->ao->search($oql, [ { page => $page }, @$apiargs ], $self->callback, $opl);
+      # Update maxpage with Search API results:
+      $maxpage = $self->ao->_maxpage;
    }
 
    return 1;

@@ -21,6 +21,7 @@ sub brik_properties {
          url => [ qw(url) ],
          key => [ qw(key) ],
          wait => [ qw(seconds) ],
+         _maxpage => [ qw(INTERNAL) ],
          _sj => [ qw(INTERNAL) ],
       },
       attributes_default => {
@@ -149,6 +150,11 @@ sub api_standard {
       return;
    }
 
+   # Set internal maxpage counter:
+   my $maxpage = $results->{max_page};
+   $self->log->verbose("setting maxpage to $maxpage");
+   $self->_maxpage($maxpage);
+
    return $cb->($results, $cb_arg);
 }
 
@@ -203,9 +209,8 @@ sub api_streaming {
       push @args, $oql;
    }
    push @args,
-      # For each loop of processing, let callback work during 5 minutes
-      # before sending a timeout.
-      timeout => 300,
+      # For each loop of processing, let callback work during X before sending a timeout.
+      timeout => 3600,
       headers => {
          'Authorization' => "apikey $key",
          'Content-Type' => "application/json",
