@@ -1,6 +1,7 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
-3.01
+3.01 Wed 20 Apr 15:18:29 CEST 2022
+   - bugfix: avoid auto-paging on non-existent pages by using _maxpage internal value
    - new function: flat
    - bugfix: blacklist/allowlist functions: correctly parse cidr parameter
    - bugfix: blacklist/allowlist/lookup functions: check for lookup parameter
