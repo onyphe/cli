@@ -20,6 +20,7 @@ my %lopts = (
    maxpage => 1,
    apiurl => 'https://www.onyphe.io/api/v2',
    apitrackquery => 0,
+   apicalculated => 0,
    apikeepalive => 0,
    wait => 1,
    # API options:
@@ -39,6 +40,7 @@ GetOptions(
    "apikey=s" => \$lopts{apikey},               # -apikey YOUR_APIKEY
    "apisize=i" => \$lopts{apisize},             # -apisize 100
    "apitrackquery=i" => \$lopts{apitrackquery}, # -apitrackquery 1
+   "apicalculated=i" => \$lopts{apicalculated}, # -apicalculated 1
    "apikeepalive=i" => \$lopts{apikeepalive},   # -apikeelalive 1
    "wait=i" => \$lopts{wait},                   # -wait 3
    # API options:
@@ -83,6 +85,7 @@ $cli->apiurl($lopts{apiurl});
 $cli->apikey($lopts{apikey});
 $cli->apisize($lopts{apisize});
 $cli->apitrackquery($lopts{apitrackquery});
+$cli->apicalculated($lopts{apicalculated});
 $cli->apikeepalive($lopts{apikeepalive});
 $cli->wait($lopts{wait});
 
@@ -145,6 +148,7 @@ General options:
    -apiurl <URL>                           use another URL endpoint for API calls
    -apikey <APIKEY>                        your personal ONYPHE API key
    -apitrackquery <0|1>                    add trackquery field into results (default: 0)
+   -apicalculated <0|1>                    add calculated fields into results (default: 0)
    -apikeepalive <0|1>                     use a keepalive message (default: 0)
 
 API options:

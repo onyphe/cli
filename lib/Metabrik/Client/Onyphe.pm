@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '3.01';
+our $VERSION = '3.02';
 
 use base qw(Metabrik);
 
@@ -24,6 +24,7 @@ sub brik_properties {
          apikey => [ qw(key) ],
          apisize => [ qw(size) ],
          apitrackquery => [ qw(0|1) ],
+         apicalculated => [ qw(0|1) ],
          apikeepalive => [ qw(0|1) ],
          wait => [ qw(seconds) ],
          # API options:
@@ -146,6 +147,7 @@ sub search {
 
    my $apiargs = [];
    push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+   push @$apiargs, { calculated => 'true' } if $self->apicalculated;
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
    for my $page (1..$maxpage) {
@@ -178,6 +180,7 @@ sub export {
    my $apiargs = [];
    #push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;  # Not supported
    #push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;  # Not supported
+   #push @$apiargs, { calculated => 'true' } if $self->apicalculated;  # Not supported
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
    return $self->ao->export($oql, $apiargs, $self->callback, $opl);
@@ -205,6 +208,7 @@ sub simple {
       my $apiargs = [];
       push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
       push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+      #push @$apiargs, { calculated => 'true' } if $self->apicalculated;  # Not supported
       push @$apiargs, { size => $self->apisize } if $self->apisize;
       return $self->best
          ? $self->ao->bulk_simple_best($oql, $category, $apiargs, $self->callback, $opl)
@@ -238,6 +242,7 @@ sub summary {
       my $apiargs = [];
       push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
       push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+      #push @$apiargs, { calculated => 'true' } if $self->apicalculated;  # Not supported
       push @$apiargs, { size => $self->apisize } if $self->apisize;
       return $self->ao->bulk_summary($oql, $type, $apiargs, $self->callback, $opl);
    }
@@ -263,6 +268,7 @@ sub discovery {
    my $apiargs = [];
    push @$apiargs, { keepalive => 'true' } if $self->apikeepalive;
    push @$apiargs, { trackquery => 'true' } if $self->apitrackquery;
+   #push @$apiargs, { calculated => 'true' } if $self->apicalculated;  # Not supported
    push @$apiargs, { size => $self->apisize } if $self->apisize;
 
    return $self->ao->bulk_discovery($oql, $category, $apiargs, $self->callback, $opl);
@@ -535,6 +541,10 @@ Number of results to return per page. Default: 10.
 =item B<apitrackquery> (0|1)
 
 Activate track query mode: it will add a trackquery field to results. Default: 0.
+
+=item B<apicalculated> (0|1)
+
+Activate calculated fields mode: it will add a calculated field to results. Default: 0.
 
 =item B<apikeepalive> (0|1)
 
