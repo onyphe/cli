@@ -42,6 +42,7 @@ GetOptions(
    "apitrackquery=i" => \$lopts{apitrackquery}, # -apitrackquery 1
    "apicalculated=i" => \$lopts{apicalculated}, # -apicalculated 1
    "apikeepalive=i" => \$lopts{apikeepalive},   # -apikeelalive 1
+   "apiauth=s" => \$lopts{apiauth},             # -apiauth user:pass
    "wait=i" => \$lopts{wait},                   # -wait 3
    # API options:
    "category=s" => \$lopts{category},  # -category datascan,synscan
@@ -87,6 +88,7 @@ $cli->apisize($lopts{apisize});
 $cli->apitrackquery($lopts{apitrackquery});
 $cli->apicalculated($lopts{apicalculated});
 $cli->apikeepalive($lopts{apikeepalive});
+$cli->apiauth($lopts{apiauth});
 $cli->wait($lopts{wait});
 
 # Set API options:

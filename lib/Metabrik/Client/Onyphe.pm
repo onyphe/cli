@@ -5,7 +5,7 @@ package Metabrik::Client::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '3.02';
+our $VERSION = '3.03';
 
 use base qw(Metabrik);
 
@@ -26,6 +26,7 @@ sub brik_properties {
          apitrackquery => [ qw(0|1) ],
          apicalculated => [ qw(0|1) ],
          apikeepalive => [ qw(0|1) ],
+         apiauth => [ qw(user:pass) ],
          wait => [ qw(seconds) ],
          # API options:
          category => [ qw(category|categories) ],
@@ -85,12 +86,14 @@ sub ao {
 
    my $apiurl = $self->apiurl;
    my $apikey = $self->apikey;
+   my $apiauth = $self->apiauth;
 
    $self->brik_help_run_undef_arg('ao', $apiurl) or return;
    $self->brik_help_run_undef_arg('ao', $apikey) or return;
 
    $self->_ao->url($apiurl);
    $self->_ao->key($apikey);
+   $self->_ao->auth($apiauth);
 
    return $self->_ao;
 }

@@ -7,7 +7,7 @@ package Metabrik::Api::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '3.02';
+our $VERSION = '3.03';
 
 use base qw(Metabrik::Client::Rest);
 
@@ -21,6 +21,7 @@ sub brik_properties {
          url => [ qw(url) ],
          key => [ qw(key) ],
          wait => [ qw(seconds) ],
+         auth => [ qw(user:pass) ],
          _maxpage => [ qw(INTERNAL) ],
          _sj => [ qw(INTERNAL) ],
       },
@@ -49,6 +50,7 @@ sub brik_properties {
       },
       require_modules => {
          'Metabrik::String::Json' => [ ],
+         'Metabrik::String::Base64' => [ ],
          'Metabrik::File::Text' => [ ],
          'AnyEvent' => [ ],
          'AnyEvent::HTTP' => [ ],
@@ -81,9 +83,17 @@ sub api_standard {
    my $wait = $self->wait;
    my $url = $self->url;
    my $key = $self->key;
+   my $auth = $self->auth;
+   my ($username, $password); ($username, $password) = split(':', $auth)
+      if defined($auth);
+
+   if (defined($username) && defined($password)) {
+      $self->username($username);
+      $self->password($password);
+   }
 
    $self->add_headers({
-      'Authorization' => "apikey $key",
+      'Authorization' => "bearer $key",
       'Content-Type' => 'application/json',
    });
 
@@ -103,7 +113,15 @@ sub api_standard {
             push @args, $k.'='.$arg->{$k};
          }
       }
+      if (defined($username) && defined($password)) {
+         push @args, "k=$key";
+      }
       $url .= '?'.join('&', @args);
+   }
+   else {
+      if (defined($username) && defined($password)) {
+         $url .= '?k='.$key;
+      }
    }
 
    $self->log->verbose("api_standard: using url[$url]");
@@ -169,6 +187,16 @@ sub api_streaming {
    my $sj = $self->_sj;
    my $url = $self->url;
    my $key = $self->key;
+   my $auth = $self->auth;
+   my ($username, $password); ($username, $password) = split(':', $auth)
+      if defined($auth);
+
+   my $basic;
+   if (defined($username) && defined($password)) {
+      my $sb = Metabrik::String::Base64->new_from_brik_init($self)
+         or return;
+      $basic = "Basic ".$sb->encode($auth);
+   }
 
    if ($req eq "GET" && defined($oql)) {
       $oql = URI::Escape::uri_escape_utf8($oql);
@@ -186,7 +214,15 @@ sub api_streaming {
             push @args, $k.'='.$arg->{$k};
          }
       }
+      if (defined($username) && defined($password)) {
+         push @args, "k=$key";
+      }
       $url .= '?'.join('&', @args);
+   }
+   else {
+      if (defined($username) && defined($password)) {
+         $url .= '?k='.$key;
+      }
    }
 
    $self->log->verbose("api_streaming: using url[$url]");
@@ -204,6 +240,8 @@ sub api_streaming {
 
    my $cv = AnyEvent->condvar;
 
+   my $authorization = defined($basic) ? $basic : "bearer $key";
+
    my @args = ( $url );
    if ($req eq "POST") {
       push @args, $oql;
@@ -212,7 +250,7 @@ sub api_streaming {
       # For each loop of processing, let callback work during X before sending a timeout.
       timeout => 3600,
       headers => {
-         'Authorization' => "apikey $key",
+         'Authorization' => $authorization,
          'Content-Type' => "application/json",
       },
       on_body => sub {

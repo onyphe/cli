@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+3.03 Wed  7 Dec 07:49:50 CET 2022
+   - new: support for API Basic authorizations
+
 3.02 Tue 13 Sep 11:28:31 CEST 2022
    - new: support for calculated fields in Search API
 
