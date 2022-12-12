@@ -1,5 +1,8 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+3.04 Mon 12 Dec 11:37:01 CET 2022
+   - BUGFIX: correctly handle UTF-8 from all API endpoints (bugfix against Export API, for instance)
+
 3.03 Wed  7 Dec 07:49:50 CET 2022
    - new: support for API Basic authorizations
 

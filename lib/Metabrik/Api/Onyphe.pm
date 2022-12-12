@@ -7,7 +7,7 @@ package Metabrik::Api::Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '3.03';
+our $VERSION = '3.04';
 
 use base qw(Metabrik::Client::Rest);
 
@@ -98,8 +98,8 @@ sub api_standard {
    });
 
    if ($req eq "GET" && defined($oql)) {
-      $oql = URI::Escape::uri_escape_utf8($oql);
-      $self->log->debug("api_standard: uri_escape_utf8 oql[$oql]");
+      $oql = URI::Escape::uri_escape($oql);
+      $self->log->debug("api_standard: uri_escape oql[$oql]");
    }
 
    $url .= "/$api";
@@ -116,7 +116,7 @@ sub api_standard {
       if (defined($username) && defined($password)) {
          push @args, "k=$key";
       }
-      $url .= '?'.join('&', @args);
+      $url .= '?'.join('&', @args) if @args;
    }
    else {
       if (defined($username) && defined($password)) {
@@ -130,7 +130,7 @@ sub api_standard {
    $SIG{INT} = sub {
       #print STDERR "Ctrl+C [$abort]\n";
       $abort++;
-      return 1;
+      exit 1;
    };
 
    my $results;
@@ -170,7 +170,7 @@ sub api_standard {
 
    # Set internal maxpage counter:
    my $maxpage = $results->{max_page};
-   $self->log->verbose("setting maxpage to $maxpage");
+   $self->log->verbose("setting maxpage to $maxpage") if defined($maxpage);
    $self->_maxpage($maxpage);
 
    return $cb->($results, $cb_arg);
@@ -199,8 +199,8 @@ sub api_streaming {
    }
 
    if ($req eq "GET" && defined($oql)) {
-      $oql = URI::Escape::uri_escape_utf8($oql);
-      $self->log->debug("api_streaming: uri_escape_utf8 oql[$oql]");
+      $oql = URI::Escape::uri_escape($oql);
+      $self->log->debug("api_streaming: uri_escape oql[$oql]");
    }
 
    $url .= "/$api";
@@ -217,7 +217,7 @@ sub api_streaming {
       if (defined($username) && defined($password)) {
          push @args, "k=$key";
       }
-      $url .= '?'.join('&', @args);
+      $url .= '?'.join('&', @args) if @args;
    }
    else {
       if (defined($username) && defined($password)) {
@@ -232,7 +232,7 @@ sub api_streaming {
    $SIG{INT} = sub {
       #print STDERR "Ctrl+C [$abort]\n";
       $abort++;
-      return 1;
+      exit 1;
    };
 
    # Will store incomplete line for later processing
