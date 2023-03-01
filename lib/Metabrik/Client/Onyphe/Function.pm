@@ -7,7 +7,7 @@ package Metabrik::Client::Onyphe::Function;
 use strict;
 use warnings;
 
-our $VERSION = '3.04';
+our $VERSION = '3.05';
 
 use base qw(Metabrik::Client::Onyphe);
 
@@ -43,6 +43,7 @@ sub brik_properties {
          'Data::Dumper' => [ ],
          'Text::ParseWords' => [ ],
          'Storable' => [ qw(dclone) ],
+         'Tie::IxHash' => [ ],
       },
    };
 }
@@ -270,13 +271,13 @@ sub unflatten {
 
    my @new = ();
    for my $flat (@$flats) {
-      my $new = {};
+      my $t = tie(my %new, 'Tie::IxHash');
 
       for my $k (keys %$flat) {
          my @toks = split(/\./, $k);
          my $value = $flat->{$k};
 
-         my $current = $new;
+         my $current = \%new;
          my $last = $#toks;
          for my $idx (0..$#toks) {
             if ($idx == $last) {  # Last token
@@ -291,7 +292,9 @@ sub unflatten {
          }
       }
 
-      push @new, $new;
+      $t->SortByKey;
+
+      push @new, \%new;
    }
 
    return \@new;
@@ -381,7 +384,7 @@ sub parse {
    my $parsed = {};
    my $idx = 0;
    for (@a) {
-      my ($k, $v) = split(/\s*=\s*/, $_);
+      my ($k, $v) = split(/\s*[=:]\s*/, $_, 2);
       if (defined($k) && defined($v)) {
          $parsed->{$k} = [ sort { $a cmp $b } split(/\s*,\s*/, $v) ];
       }
@@ -413,7 +416,7 @@ In the case your process() method does not write anything to output argument, yo
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2022, Patrice E<lt>GomoRE<gt> Auffret
+Copyright (c) 2018-2023, Patrice E<lt>GomoRE<gt> Auffret
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

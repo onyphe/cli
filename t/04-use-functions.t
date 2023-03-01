@@ -1,8 +1,9 @@
 use Test;
-BEGIN { plan(tests => 24) }
+BEGIN { plan(tests => 26) }
 
 ok(sub { eval("use Metabrik::Client::Onyphe::Function"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Addcount"); $@ ? 0 : 1 }, 1, $@);
+ok(sub { eval("use Metabrik::Client::Onyphe::Function::Fieldcount"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Allowlist"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Blacklist"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Blocklist"); $@ ? 0 : 1 }, 1, $@);
@@ -25,3 +26,4 @@ ok(sub { eval("use Metabrik::Client::Onyphe::Function::Uniq"); $@ ? 0 : 1 }, 1, 
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Where"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Whitelist"); $@ ? 0 : 1 }, 1, $@);
 ok(sub { eval("use Metabrik::Client::Onyphe::Function::Whois"); $@ ? 0 : 1 }, 1, $@);
+ok(sub { eval("use Metabrik::Client::Onyphe::Function::Certcleaner"); $@ ? 0 : 1 }, 1, $@);

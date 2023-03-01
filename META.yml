@@ -15,13 +15,13 @@ name: Metabrik-Client-Onyphe
 provides:
   Metabrik::Api::Onyphe:
     file: lib/Metabrik/Api/Onyphe.pm
-    version: '3.04'
+    version: '3.05'
   Metabrik::Client::Onyphe:
     file: lib/Metabrik/Client/Onyphe.pm
-    version: '3.04'
+    version: '3.05'
   Metabrik::Client::Onyphe::Function:
     file: lib/Metabrik/Client/Onyphe/Function.pm
-    version: '3.04'
+    version: '3.05'
   Metabrik::Client::Onyphe::Function::Addcount:
     file: lib/Metabrik/Client/Onyphe/Function/Addcount.pm
   Metabrik::Client::Onyphe::Function::Allowlist:
@@ -30,6 +30,8 @@ provides:
     file: lib/Metabrik/Client/Onyphe/Function/Blacklist.pm
   Metabrik::Client::Onyphe::Function::Blocklist:
     file: lib/Metabrik/Client/Onyphe/Function/Blocklist.pm
+  Metabrik::Client::Onyphe::Function::Certcleaner:
+    file: lib/Metabrik/Client/Onyphe/Function/Certcleaner.pm
   Metabrik::Client::Onyphe::Function::Count:
     file: lib/Metabrik/Client/Onyphe/Function/Count.pm
   Metabrik::Client::Onyphe::Function::Dedup:
@@ -40,8 +42,12 @@ provides:
     file: lib/Metabrik/Client/Onyphe/Function/Expand.pm
   Metabrik::Client::Onyphe::Function::Export:
     file: lib/Metabrik/Client/Onyphe/Function/Export.pm
+  Metabrik::Client::Onyphe::Function::Fieldcount:
+    file: lib/Metabrik/Client/Onyphe/Function/Fieldcount.pm
   Metabrik::Client::Onyphe::Function::Fields:
     file: lib/Metabrik/Client/Onyphe/Function/Fields.pm
+  Metabrik::Client::Onyphe::Function::Filter:
+    file: lib/Metabrik/Client/Onyphe/Function/Filter.pm
   Metabrik::Client::Onyphe::Function::Flat:
     file: lib/Metabrik/Client/Onyphe/Function/Flat.pm
   Metabrik::Client::Onyphe::Function::Httpshot:
@@ -73,8 +79,9 @@ provides:
 requires:
   Metabrik: '1.40'
   Metabrik::Repository: '1.40'
+  Tie::IxHash: '0'
   perl: v5.6.1
 resources:
   license: http://opensource.org/licenses/BSD-3-Clause
-version: '3.04'
+version: '3.05'
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

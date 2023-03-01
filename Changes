@@ -1,7 +1,14 @@
 Revision history for Perl extension Metabrik::Client::Onyphe.
 
+3.05 Wed  1 Mar 07:24:05 CET 2023
+   - new: -version argument to onyphe program
+   - new: certcleaner, fieldcount & filter functions
+   - update: print JSON output with ordered field names
+   - update: fields function accepts a new argument to set a default value for missing fields
+
 3.04 Mon 12 Dec 11:37:01 CET 2022
    - BUGFIX: correctly handle UTF-8 from all API endpoints (bugfix against Export API, for instance)
+   - bugfix: stop CLI on SIGINT (Ctrl+C)
 
 3.03 Wed  7 Dec 07:49:50 CET 2022
    - new: support for API Basic authorizations

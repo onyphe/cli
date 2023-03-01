@@ -6,12 +6,15 @@ lib/Metabrik/Client/Onyphe/Function/Addcount.pm
 lib/Metabrik/Client/Onyphe/Function/Allowlist.pm
 lib/Metabrik/Client/Onyphe/Function/Blacklist.pm
 lib/Metabrik/Client/Onyphe/Function/Blocklist.pm
+lib/Metabrik/Client/Onyphe/Function/Certcleaner.pm
 lib/Metabrik/Client/Onyphe/Function/Count.pm
 lib/Metabrik/Client/Onyphe/Function/Dedup.pm
 lib/Metabrik/Client/Onyphe/Function/Exec.pm
 lib/Metabrik/Client/Onyphe/Function/Expand.pm
 lib/Metabrik/Client/Onyphe/Function/Export.pm
+lib/Metabrik/Client/Onyphe/Function/Fieldcount.pm
 lib/Metabrik/Client/Onyphe/Function/Fields.pm
+lib/Metabrik/Client/Onyphe/Function/Filter.pm
 lib/Metabrik/Client/Onyphe/Function/Flat.pm
 lib/Metabrik/Client/Onyphe/Function/Httpshot.pm
 lib/Metabrik/Client/Onyphe/Function/Lookup.pm

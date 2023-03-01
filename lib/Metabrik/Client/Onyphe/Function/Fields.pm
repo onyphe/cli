@@ -20,13 +20,15 @@ sub brik_properties {
 }
 
 #
-# | fields ip,protocol,domain,app.http.component.product
+# | fields ip,protocol,domain,app.http.component.product default=value
+# | fields ip,protocol,domain,app.http.component.product default=""
 #
 sub process {
    my $self = shift;
    my ($flat, $state, $args, $output) = @_;
 
    my $parsed = $self->parse($args);
+   my $default = $parsed->{default};
    my $keep = $parsed->{0} || {};
 
    # Build list of fields to be kept from input argument:
@@ -40,6 +42,13 @@ sub process {
    # Iterate over all flat fields and delete those not wanted for being kept:
    for my $k (@$fields) {
       $self->delete($flat, $k) if !$keep->{$k};
+   }
+
+   # Set default values for empty keys:
+   if (defined($default)) {
+      for my $k (keys %$keep) {
+         $flat->{$k} = $default->[0] || '' unless defined($flat->{$k});
+      }
    }
 
    push @$output, $flat if %$flat > 0;
@@ -61,7 +70,7 @@ Metabrik::Client::Onyphe::Function::Fields - client::onyphe::function::fields Br
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2018-2022, Patrice E<lt>GomoRE<gt> Auffret
+Copyright (c) 2018-2023, Patrice E<lt>GomoRE<gt> Auffret
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

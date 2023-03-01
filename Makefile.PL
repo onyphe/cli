@@ -15,6 +15,7 @@ WriteMakefile(
    PREREQ_PM => {
       'Metabrik' => '1.40',
       'Metabrik::Repository' => '1.40',
+      'Tie::IxHash' => 0,
    },
    EXE_FILES => [ qw(bin/onyphe) ],
 );

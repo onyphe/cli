@@ -15,6 +15,7 @@ my $builder = Module::Build->new(
       'perl' => '5.6.1',
       'Metabrik' => '1.40',
       'Metabrik::Repository' => '1.40',
+      'Tie::IxHash' => 0,
    },
    configure_requires => {
       'Module::Build' => 0,
