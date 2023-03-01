@@ -9,7 +9,7 @@ INSTALLATION
 
   A/ Install all dependencies (Ubuntu/Debian/Kali systems)
 
-  $ sudo apt-get install -y build-essential less cpanminus libreadline-dev coreutils libexpat1-dev phantomjs bsdutils libssl-dev libxml2-dev procps aptitude liblwp-protocol-https-perl perl-doc git
+  $ sudo apt-get install -y build-essential less cpanminus libreadline-dev coreutils libexpat1-dev bsdutils libssl-dev libxml2-dev procps aptitude liblwp-protocol-https-perl perl-doc git
 
   B/ Install Metabrik and its Repository
 
