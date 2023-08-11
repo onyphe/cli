@@ -1,114 +1,71 @@
-Revision history for Perl extension Metabrik::Client::Onyphe.
+Revision history for Perl extension Onyphe.
 
-3.05 Wed  1 Mar 07:24:05 CET 2023
-   - new: -version argument to onyphe program
-   - new: certcleaner, fieldcount & filter functions
-   - update: print JSON output with ordered field names
-   - update: fields function accepts a new argument to set a default value for missing fields
+4.09 Mon 17 Jul 11:33:46 CEST 2023
+  - Bugfix: OPP to skip keys when they are undef
+  - Bugfix: add more Perl deps for installation
+  - New: onyphe to add -import argument (0 or 1 to disable or enable import for on-demand scans)
+  - New: onyphe to add -postsearch API endpoint
+  - New: onyphe to add -ondemand-scope-ip-bulk & ondemand-scope-domain-bulk API endpoints
+  - New: Onyphe::Api: add option to give content-type to queries
+  - New: Onyphe::Api: post_request() function for POST Search API endpoint
+  - New: Onyphe::Api: post_stream() function for POST Export API endpoint
+  - New: Onyphe::Api: import parameter for API endpoints supporting it (on-demand scans)
+  - New: Onyphe::Api: ondemand_scope_ip_bulk & ondemand_scope_domain_bulk API endpoints
 
-3.04 Mon 12 Dec 11:37:01 CET 2022
-   - BUGFIX: correctly handle UTF-8 from all API endpoints (bugfix against Export API, for instance)
-   - bugfix: stop CLI on SIGINT (Ctrl+C)
+4.08 Wed  5 Apr 17:44:05 CEST 2023
+  - Bugfix: allowlist proc to keep results only when all field have matched,
+    thus when all fields exist in JSON document
 
-3.03 Wed  7 Dec 07:49:50 CET 2022
-   - new: support for API Basic authorizations
+4.07 Wed  5 Apr 17:10:08 CEST 2023
+  - Update: add trackquery:true to all ONYPHE Procs
+  - New procs added: lookup, blocklist & allowlist
 
-3.02 Tue 13 Sep 11:28:31 CEST 2022
-   - new: support for calculated fields in Search API
+4.06 Sat 25 Mar 11:32:35 CET 2023
+  - Bugfix: state machine is now not only bound to a proc but also to its ID. Thus
+    we can use multiple times the same proc in OPP without messing with previous proc's
+    state.
+  - Bugfix: catch API calls to retry them in case of network failure
+  - Update: set connection timeout to 5 seconds i/o 10
 
-3.01 Wed 20 Apr 15:18:29 CEST 2022
-   - bugfix: avoid auto-paging on non-existent pages by using _maxpage internal value
-   - new function: flat
-   - bugfix: blacklist/allowlist functions: correctly parse cidr parameter
-   - bugfix: blacklist/allowlist/lookup functions: check for lookup parameter
-   - bugfix: merge: correctly merges results from first OQL query and second one
-   - update: lookup: support for cidr matches
-   - older parse() and run() has been removed, replaced by new run() & parse() commands
-   - ignore undefined fields from client::onyphe::function::* to avoir displaying warnings
+4.05 Fri 24 Mar 07:36:56 CET 2023
+  - Bugfix: remove leading & trailing spaces in OPP query
+  - New: regex proc
 
-3.00 Mon 24 Jan 14:43:11 CET 2022
-   - nearly complete rewrite with full support for all APIs
-   - simplified function development scheme
+4.04 Thu 23 Mar 10:31:52 CET 2023
+  - Bugfix: handle nested fields for expand, output, splitsubnet, uniq, fieldcount procs
+  - Bugfix: don't remove _* fields on delete()
+  - Bugfix: dedup proc to avoid deduping when no dedup key found
+  - New: set() function to handle nested fields
+  - New: uniq proc supports multiple fields like dedup proc
 
-2.04 Thu  7 May 18:00:38 CEST 2020
-   - update: whitelist and blacklist functions support for CIDR match
-             against subnet field (threatlist lookup use-case)
+4.03 Sat 18 Mar 11:05:55 CET 2023
+  - UPDATE: all request & stream APIs can now accept HTTP params
+  - Update: -discovery to force -size to 10000 by default
+  - Bugfix: Onyphe::Api interface changed, Procs have been updated
 
-2.03 Fri 27 Mar 15:01:34 CET 2020
-   - new: lookup function
+4.02 Thu 16 Mar 16:38:44 CET 2023
+  - NEW: Onyphe::Api ondemand_scope_result() function
+  - NEW: -ondemand-scope-ip, -ondemand-scope-domain, -ondemand-scope-result, -ondemand-resolver-domain & -ondemand-resolver-result APIs
+  - New: -key argument to override default API key from conf
+  - New: -maxscantime argument to configure scan timeout threshold
+  - New: -urlscan 0|1 to deactivate/activate urlscan in ondemand-scope APIs
+  - New: -vulnscan 0|1 to deactivate/activate urlscan in ondemand-scope APIs
+  - Bugfix: all arguments were not working at all (-size, -maxpage, ...)
+  - Bugfix: OPP callbacks were no more working against Alert API
 
-2.02 Wed 25 Mar 10:43:27 CET 2020
-   - update: pipeline can accept last-type functions, executing only on last
-     known state. Example: piechart.
-   - update: client::onyphe::function now have a last Attribute
-   - update: whitelist and blacklist optimized to load CSV file only 1 time
-   - new: piechart function
-   - new: uniq function
-   - new: top function
-   - new: whois function
-   - new: httpshot function
-   - new: exec function
+4.01 Fri 10 Mar 06:39:56 CET 2023
+  - NEW: bulk_discovery() supports passing an OQL along with input filename
+  - New procs added: top, fieldcount, filter, expand, discovery, pivots, subnet, output, flatten
+  - New: various state handling functions
+  - New: systematically order results by field name
+  - BUGFIX: onyphe to strip "@category":"none" in OPP callbacks
+  - BUGFIX: export, bulk and all streaming APIs were returning duplicates at output
+  - Bugfix: discovery proc to strip "@category":"none" results
+  - Update: output proc to render ordered results
+  - Remove: app.extract.domain from pivots proc as too easy to do false positive
 
-2.01 Tue 24 Mar 11:25:41 CET 2020
-   - new: added logging Brik so we send logging to STDERR and data to STDOUT
-   - bugfix: API endpoints for Simple APIs was failing
-   - bugfix: when HTTP GET to APIv2 gives error, retry after waiting
-   - bugfix: export Command to have a 5 minutes timeout to give time for
-     pipeline to process data
-   - update: export & search pipeline merged to they behave the exact same way
-
-2.00 Mon 23 Mar 15:30:59 CET 2020
-   - UPDATE: rework internal format, now called a "page"
-   - update: functions are no more forced to have a parameter
-   - update: print error messages on STDERR
-   - new: functions can keep state between calls to support streaming mode
-   - new: streaming-like mode for search, works the same as export
-   - bugfix: abort on Ctrl+C on Export API
-   - remove: -output parameter on bin/onyphe
-   - remove: -fields parameter on bin/onyphe
-   - remove: -encode parameter on bin/onyphe
-
-1.09 Sun 22 Mar 12:04:38 CET 2020
-   - update: wait time is now 1 second as ONYPHE accepts 1 request per second
-   - bugfix: dedup function to support array-type fields
-   - bugfix: URI encode query strings before sending them to APIv2
-
-1.08 Fri 20 Mar 15:38:02 CET 2020
-   - bugfix: on parsing streamed data from Export API, was missing data
-   - bugfix: Export API path
-
-1.07 Fri 20 Mar 14:16:29 CET 2020
-   - UPDATE: JSON output is now line-based. One result is one JSON line.
-   - new: Export API with pipeline support
-   - bugfix: whitelist and blacklist functions to support array-type fields
-
-1.06 Fri 20 Mar 09:30:03 CET 2020
-   - new: -wait command line option to change wait time between requests
-   - bugfix: whitelist function keeps results matching criterias from a CSV
-   - bugfix: blacklist function removes results matching criterias from a CSV
-
-1.05 Wed 18 Mar 08:53:52 CET 2020
-   - update: API v2
-   - new: topsite, vulnscan, datamd5, domain and hostname API v2
-
-1.04 Thu 14 Mar 08:53:52 CET 2019
-   - new: datashot and onionshot APIs
-
-1.03 Mon  3 Dec 13:59:09 CET 2018
-   - bugfix: handle function filters when subfields are used
-   - new: search function
-   - new: dedup function
-   - new: merge function
-   - new: whitelist function
-   - new: JSON output feature
-   - new: -s <apiurl> argument to onyphe program
-
-1.02 Fri  2 Nov 15:23:11 CET 2018
-   - update: set HTTP user agent to Metabrik::Client::Onyphe
-
-1.01 Fri  2 Nov 12:04:38 CET 2018
-   - new: capability to perform pipelined searches like in a UNIX shell from -search argument
-
-1.00 Wed 31 Oct 09:33:11 CET 2018
-   - first public release
+4.00 Tue  7 Mar 16:03:36 CET 2023
+  - Complete rewrite with minimal dependencies
+  - Based on Mojolicious framework
+  - ONYPHE Processing Pipeline is now a separate tool but shipped with this dist
 

@@ -1,135 +1,46 @@
-Metabrik::Client::Onyphe
-========================
 
-   Official client to access the ONYPHE API.
 
-   To know more: https://www.onyphe.io/
+  1. Installating dependencies for Ubuntu/Debian/Kali systems
 
-INSTALLATION
+  sudo apt-get install cpanminus libmojolicious-perl libtie-ixhash-perl
+  sudo apt-get install liblwp-protocol-https-perl libjson-xs-perl libfile-slurp-perl
+  sudo apt-get install libregexp-ipv6-perl libtext-csv-xs-perl
+  sudo cpanm -n Config::INI::Tiny Text::ParseWords Net::IPv4Addr Regexp::IPv4
 
-  A/ Install all dependencies (Ubuntu/Debian/Kali systems)
 
-  $ sudo apt-get install -y build-essential less cpanminus libreadline-dev coreutils libexpat1-dev bsdutils libssl-dev libxml2-dev procps aptitude liblwp-protocol-https-perl perl-doc git
+  2. Installing dependencies for all other systems
 
-  B/ Install Metabrik and its Repository
+  Install your local cpanminus ditribution and run the following:
 
-  $ sudo cpanm -n Metabrik Metabrik::Repository
+  sudo cpanm -n Mojolicious Config::INI::Tiny Tie::IxHash LWP::Protocol::https JSON::XS
+  sudo cpanm -n Text::ParseWords File::Slurp
+  sudo cpanm -n Regexp::IPv4 Text::CSV_XS Net::IPv4Addr Regexp::IPv6
 
-  C/ Install this module
 
-  $ git clone https://github.com/onyphe/client onyphe
-  $ cd onyphe
-  $ perl Makefile.PL
-  $ make
-  $ make test
-  $ sudo make install
+  2.a. Configure ONYPHE Command Line Interface settings
 
-  D/ Install client::onyphe Brik
+  echo 'api_endpoint = https://www.onyphe.io/api/v2' > ~/.onyphe.ini
+  echo 'api_key = XXX' >> ~/.onyphe.ini
 
-  $ sudo perl -MMetabrik::Core::Context -e 'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe")'
 
-  E/ Set your API key in the configuration file
+  4. Install ONYPHE Command Line Interface
 
-  $ echo '<APIKEY>' > ~/.onyphe_rc
+  perl Build.PL
+  ./Build && ./Build test
+  sudo ./Build install
 
-  F/ Install custom functions (example: httpshot)
 
-  $ sudo perl -MMetabrik::Core::Context -e 'Metabrik::Core::Context->new_brik_run("brik::tool","install","client::onyphe::function::httpshot")'
+  5. With an Unrated API license
 
-  Current list of custom functions:
-  - addcount
-  - allowlist
-  - blocklist
-  - count
-  - dedup
-  - exec
-  - expand
-  - fields
-  - httpshot
-  - lookup
-  - merge
-  - output
-  - piechart
-  - search
-  - splitsubnet
-  - top
-  - uniq
-  - where
-  - whois
+  echo 'api_unrated_endpoint = https://www.onyphe.io/unrated/api/v2' > ~/.onyphe.ini
+  echo 'api_unrated_email = user@company.com' >> ~/.onyphe.ini
+  echo 'api_key = XXX' >> ~/.onyphe.ini
 
-  G/ Enjoy
 
-  $ onyphe
+  6. You're done
 
-EXAMPLES
+  onyphe -help
+  onyphe -version
 
-  # Query profile information (like API endpoints, available categories or remaining credits)
-  $ onyphe -user | jq .
-
-  #
-  # Query the Simple API
-  # See https://www.onyphe.io/documentation/api for more APIs
-  #
-
-  # Search DNS information for given IP address:
-  $ onyphe -simple -category resolver 8.8.8.8
-
-  # Search data from free text:
-  $ onyphe -simple -category datascan 'WD My Cloud'
-
-  # Get a summary of information from an IP address:
-  $ onyphe -summary ip 8.8.8.8
-
-  #
-  # Query the Search API (need subscription, see https://www.onyphe.io/pricing)
-  # See https://www.onyphe.io/documentation/api for more APIs
-  #
-
-  # Search for some specific products:
-  $ onyphe -search 'category:datascan product:Nginx' | jq .
-
-  # Just display useful information to you:
-  $ onyphe -search 'category:datascan product:Nginx -field:ip,port,tls,product,productversion,cpe'
-
-  # Scroll more than just the first page (maximum page is 1,000 to get up to 10,000 results):
-  # !!! WARNING: may consume up to 1,000 credits
-  $ onyphe -maxpage 1000 -search 'category:datascan protocol:smb tag:smb::compression'
-
-  # Save Mirai threatlist information from yesterday results
-  $ onyphe -search 'category:threatlist threatlist:"ONYPHE - botnet/mirai" -dayago:1' > mirai.json
-
-  # Execute a corelation search to return results that match criterias from another query
-  # Here, we want to find modbus devices which also have a Web interface.
-  # !!! WARNING: may consume up to 11,000 credits.
-  $ onyphe -maxpage 1000 -search 'category:datascan protocol:modbus -dayago:1 | search category:datascan protocol:http ip:$ip'
-
-  # Fetch all results
-  $ onyphe -export 'category:datascan protocol:mongo' > mongo.json
-
-  # Lookup a list of allowed IP against an input csv to know if they are threats:
-  $ cat input.csv
-  ip
-  1.1.1.1
-  2.2.2.2
-  $ onyphe -export 'category:threatlist -exists:subnet | allowlist input.csv'
-
-  # Display top countries for an organization:
-  $ onyphe -export 'category:geoloc organization:"Global Layer B.V." | top country | piechart'
-
-  # Uncloak .onion servers:
-  onyphe -apikeepalive 1 -export 'category:onionscan -exists:app.http.bodymd5 | where category:datascan app.http.bodymd5:$app.http.bodymd5 | fields ip,domain,protocol,app.http.bodymd5,classification'
-
-  # Uncloak CloudFlare-hosted servers:
-  onyphe -apikeepalive 1 -export 'category:datascan ?organization:CLOUDFLARENET ?geolocus.netname:CLOUDFLARENET -exists:fingerprint.sha1 | search category:datascan !organization:CLOUDFLARENET !geolocus.netname:CLOUDFLARENET fingerprint.sha1:$fingerprint.sha1'
-
-  # Execute a custom script
-  # Note: myscript.pl will take the JSON document as input from a file script must read:
-  onyphe -search 'product:nginx | exec myscript.pl'
-
-COPYRIGHT AND LICENSE
-
-   Copyright (c) 2018-2022, ONYPHE
-
-   You may distribute this module under the terms of The BSD 3-Clause License.
-   See LICENSE file in the source distribution archive.
+  onyphe -search 'protocol:ssh | uniq domain | addcount'
 
