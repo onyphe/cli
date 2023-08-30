@@ -1,5 +1,8 @@
 Revision history for Perl extension Onyphe.
 
+4.10 Wed 30 Aug 07:23:29 CEST 2023
+  - Bugfix: correctly handle HTTP_PROXY & HTTPS_PROXY environment variables
+
 4.09 Mon 17 Jul 11:33:46 CEST 2023
   - Bugfix: OPP to skip keys when they are undef
   - Bugfix: add more Perl deps for installation
