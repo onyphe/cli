@@ -1,11 +1,11 @@
 #
-# $Id: Api.pm,v e8e4d5336c13 2023/09/06 12:20:39 gomor $
+# $Id: Api.pm,v 2ad8bf49f5cd 2023/10/15 11:55:27 gomor $
 #
 package Onyphe::Api;
 use strict;
 use warnings;
 
-our $VERSION = '4.11';
+our $VERSION = '4.12';
 
 use experimental qw(signatures);
 
@@ -349,11 +349,14 @@ sub _cb_stream ($self, $results = undef, $cb_args = undef) {
 }
 
 sub _on_read ($self, $cb = undef, $cb_args = undef, $buf = \'') {
-   # XXX: handle is_success and render ERROR
    return sub {
       my ($content, $bytes) = @_;
       $bytes = $$buf.$bytes;  # Complete from previously incomplete lines
       my ($this, $tail) = $bytes =~ m/^(.*\n)(.*)$/s;
+      # Check errors:
+      if (defined($bytes) && $bytes =~ m{"status":"nok"}) {
+         return $cb->($bytes, $cb_args);
+      }
       # One line is not complete, add to buf and go to next:
       if (!defined($this)) {
          $buf = \$bytes;

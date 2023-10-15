@@ -21,6 +21,7 @@ lib/Onyphe.pm
 lib/OPP/Output.pm
 lib/OPP.pm
 lib/OPP/Proc/Addcount.pm
+lib/OPP/Proc/Addfield.pm
 lib/OPP/Proc/Allowlist.pm
 lib/OPP/Proc/Blocklist.pm
 lib/OPP/Proc/Count.pm

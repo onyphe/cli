@@ -1,5 +1,11 @@
 Revision history for Perl extension Onyphe.
 
+4.12 Sun 15 Oct 13:54:00 CEST 2023
+  - New proc added: addfield
+  - Update pivots proc: added app.http.tracker.newrelic as a pivot
+  - Bugfix: handle errors from API with Discovery API
+  - Bugfix: added nested fields for app.http.header & alert objects
+
 4.11 Wed  6 Sep 14:20:17 CEST 2023
   - Bugfix: do not encode in UTF-8 a second time input file for Discovery API
 
