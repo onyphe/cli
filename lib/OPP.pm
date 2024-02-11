@@ -1,5 +1,5 @@
 #
-# $Id: OPP.pm,v 689580a0e0f8 2023/07/17 09:34:26 gomor $
+# $Id: OPP.pm,v 06a2fc71a0d8 2023/11/10 11:06:24 gomor $
 #
 package OPP;
 use strict;
@@ -38,6 +38,9 @@ sub is_nested {
    my ($field) = @_;
 
    croak("is_nested: need field arg") unless defined($field);
+
+   my $fields = $self->nested;
+   return 0 unless defined($fields);
 
    my $nested = { map { $_ => 1 } @{$self->nested} };
 
@@ -187,6 +190,71 @@ sub unflatten {
    }
 
    return \@new;
+}
+
+sub pipeone {
+   my $self = shift;
+   my ($input, $opp) = @_;
+
+   $input = ref($input) eq 'ARRAY' ? $input : [ $input ];
+
+   return $input unless defined($opp);
+
+   $opp =~ s{(?:^\s*|\s*$)}{}g;
+
+   my @cmd = split(/\s*(?<!\\)\|\s*/, $opp);
+   croak("pipeone: no query, aborting") if @cmd == 0;
+
+   print STDERR "pipeone: cmdlist[@cmd] count[".scalar(@cmd)."]\n" if $debug;
+
+   my $idx = 0;
+   $self->output->add($self->flatten($input));
+   for my $this (@cmd) {
+      print STDERR "pipeone: cmd[$this]\n" if $debug;
+      my @proc = $this =~ m{^(\S+)(?:\s+(.+))?$};
+      if (! defined($proc[0])) {
+         print STDERR "pipeone: parse failed for [$this]\n" if $debug;
+         return;
+      }
+
+      # Load proc
+      my $module = 'OPP::Proc::'.ucfirst(lc($proc[0]));
+      eval("use $module;");
+      if ($@) {
+         chomp($@);
+         print STDERR "pipeone: use proc failed [$proc[0]]: $@\n";
+         return;
+      }
+      my $proc = $module->new;
+      if (!defined($proc)) {
+         print STDERR "pipeone: load proc failed [$proc[0]]\n";
+         return;
+      }
+      $proc->idx($idx);
+      $proc->nested($self->nested);
+      $proc->state($self->state);
+      $proc->output($proc->clone($self->output)->init);
+
+      my $argument = $proc[1];
+      my $options = $proc->parse($argument);
+      $proc->options($options);
+
+      print STDERR "pipeone: proc[$proc]\n" if $debug;
+
+      for my $input (@{$self->output->docs}) {
+         $proc->process($input);
+      }
+      $self->output->docs($proc->output->docs);
+      $idx++;
+   }
+
+   if (defined($self->output->docs)) {
+      my $docs = $self->unflatten($self->output->docs);
+      return $docs;
+      #$self->output->flush;  # Don't flush output when processed, let user's do it
+   }
+
+   return;
 }
 
 sub pipeline {

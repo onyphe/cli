@@ -1,5 +1,5 @@
 #
-# $Id: Blocklist.pm,v a6091d726551 2023/04/05 15:44:32 gomor $
+# $Id: Blocklist.pm,v dd1d616d0c52 2024/01/24 15:23:37 gomor $
 #
 package OPP::Proc::Blocklist;
 use strict;
@@ -14,13 +14,12 @@ use File::Slurp qw(read_file);
 use Text::CSV_XS;
 use Net::IPv4Addr qw(ipv4_in_network);
 
-# Load CSV data here, one time
-my $csv;
-my $match_fields;  # Support all fields as a match (AND match)
-
 sub _load {
    my $self = shift;
    my ($file) = @_;
+
+   my $csv = $self->state->value('csv', $self->idx);
+   my $match_fields = $self->state->value('match_fields', $self->idx);
 
    # Load CSV lookup:
    unless (defined($csv)) {
@@ -50,6 +49,9 @@ sub _load {
       }
 
       #print STDERR Data::Dumper::Dumper($csv)."\n";
+
+      $self->state->add('csv', $csv, $self->idx);
+      $self->state->add('match_fields', $match_fields, $self->idx);
    }
 
    return [ $csv, $match_fields ];
@@ -73,9 +75,9 @@ sub process {
 
    my $cidr = $options->{cidr} || 'ip';  # Use ip field by default for cidr matches
 
-   my $loaded = $self->_load($file);
-   $csv = $loaded->[0];
-   $match_fields = $loaded->[1];
+   my $r = $self->_load($file);
+   my $csv = $r->[0];
+   my $match_fields = $r->[1];
 
    # Touch nothing when matching fields are not found in input:
    for my $field (@$match_fields) {

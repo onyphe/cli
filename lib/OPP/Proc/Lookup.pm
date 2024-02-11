@@ -1,5 +1,5 @@
 #
-# $Id: Lookup.pm,v 69a3d7308875 2023/04/05 15:11:02 gomor $
+# $Id: Lookup.pm,v e858e33dfc66 2023/12/07 09:58:09 gomor $
 #
 package OPP::Proc::Lookup;
 use strict;
@@ -14,14 +14,14 @@ use File::Slurp qw(read_file);
 use Text::CSV_XS;
 use Net::IPv4Addr qw(ipv4_in_network);
 
-# Load CSV data here, one time
-my $csv;
-my $match_fields;  # Prepare for supporting matching with AND filters
-my $lookup_field;  # Support only last column as a match
 
 sub _load {
    my $self = shift;
    my ($file) = @_;
+
+   my $csv = $self->state->value('csv', $self->idx);
+   my $match_fields = $self->state->value('match_fields', $self->idx);
+   my $lookup_field = $self->state->value('lookup_field', $self->idx);
 
    # Load CSV lookup:
    unless (defined($csv)) {
@@ -41,6 +41,7 @@ sub _load {
       #print STDERR Data::Dumper::Dumper($header)."\n";
       my $lookup = pop @$header;  # Last field is the data to add
       $lookup_field = $lookup;
+      # Prepare for supporting matching with AND filters:
       $match_fields = [ sort { $a cmp $b } @$header ];
       $header = join('+', sort { $a cmp $b } @$header);
 
@@ -51,6 +52,10 @@ sub _load {
       }
 
       #print STDERR Data::Dumper::Dumper($csv)."\n";
+
+      $self->state->add('csv', $csv, $self->idx);
+      $self->state->add('match_fields', $match_fields, $self->idx);
+      $self->state->add('lookup_field', $lookup_field, $self->idx);
    }
 
    return [ $csv, $match_fields, $lookup_field ];
@@ -78,7 +83,10 @@ sub process {
 
    my $cidr = $options->{cidr} || 'ip';  # Use ip field by default for cidr matches
 
-   $self->_load($file);
+   my $r = $self->_load($file);
+   my $csv = $r->[0];
+   my $match_fields = $r->[1];
+   my $lookup_field = $r->[2];
 
    # Touch nothing when matching fields are not found in input:
    for my $field (@$match_fields) {

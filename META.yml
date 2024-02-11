@@ -31,6 +31,9 @@ provides:
   OPP::Proc::Addcount:
     file: lib/OPP/Proc/Addcount.pm
     version: '1.00'
+  OPP::Proc::Addfield:
+    file: lib/OPP/Proc/Addfield.pm
+    version: '1.00'
   OPP::Proc::Allowlist:
     file: lib/OPP/Proc/Allowlist.pm
     version: '1.00'
@@ -48,6 +51,9 @@ provides:
     version: '1.00'
   OPP::Proc::Exec:
     file: lib/OPP/Proc/Exec.pm
+    version: '1.00'
+  OPP::Proc::Exists:
+    file: lib/OPP/Proc/Exists.pm
     version: '1.00'
   OPP::Proc::Expand:
     file: lib/OPP/Proc/Expand.pm
@@ -105,10 +111,10 @@ provides:
     version: '1.00'
   Onyphe:
     file: lib/Onyphe.pm
-    version: '4.10'
+    version: '4.13'
   Onyphe::Api:
     file: lib/Onyphe/Api.pm
-    version: '4.10'
+    version: '4.13'
 requires:
   Carp: '0'
   Config::INI::Tiny: '0'
@@ -127,5 +133,5 @@ requires:
   Tie::IxHash: '0'
 resources:
   license: http://opensource.org/licenses/BSD-3-Clause
-version: '4.10'
+version: '4.13'
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

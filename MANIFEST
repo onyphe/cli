@@ -28,6 +28,7 @@ lib/OPP/Proc/Count.pm
 lib/OPP/Proc/Dedup.pm
 lib/OPP/Proc/Discovery.pm
 lib/OPP/Proc/Exec.pm
+lib/OPP/Proc/Exists.pm
 lib/OPP/Proc/Expand.pm
 lib/OPP/Proc/Fieldcount.pm
 lib/OPP/Proc/Fields.pm

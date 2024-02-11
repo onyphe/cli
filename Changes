@@ -1,5 +1,13 @@
 Revision history for Perl extension Onyphe.
 
+4.13 Sun 11 Feb 17:46:49 CET 2024
+  - New: pipeone() function in OPP
+  - New proc added: exists
+  - New: added -aslines, -full, -riskscan & -asm arguments
+  - Bugfix: lookup proc to support state so we can call it multiple times
+  - Bugfix: do not double escape POST content (like for -postsearch)
+  - Bugfix: handle HTTP errors when error is not in JSON format
+
 4.12 Sun 15 Oct 13:54:00 CEST 2023
   - New proc added: addfield
   - Update pivots proc: added app.http.tracker.newrelic as a pivot

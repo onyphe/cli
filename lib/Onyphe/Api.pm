@@ -1,11 +1,11 @@
 #
-# $Id: Api.pm,v 2ad8bf49f5cd 2023/10/15 11:55:27 gomor $
+# $Id: Api.pm,v 3e932e226ab4 2024/02/04 14:26:24 gomor $
 #
 package Onyphe::Api;
 use strict;
 use warnings;
 
-our $VERSION = '4.12';
+our $VERSION = '4.13';
 
 use experimental qw(signatures);
 
@@ -167,6 +167,13 @@ sub request ($self, $api, $input = undef, $page = undef, $maxpage = undef, $para
       }
       unless ($res->is_success) {
          my $code = $res->code;
+         # Not JSON result:
+         unless (defined($res->json)) {
+            my $text = $res->message;
+            print STDERR "ERROR: Request API call failed: $code, $text\n";
+            return;
+         }
+
          my $text = $res->json->{text};
          # If code 429, retry with some sleep:
          if ($code == 429) {
@@ -246,8 +253,6 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
 
       print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
 
-      $input = url_escape($input) if defined $input;
-
    RETRY:
       my $res;
       eval {
@@ -260,6 +265,12 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
       }
       unless ($res->is_success) {
          my $code = $res->code;
+         # Not JSON result:
+         unless (defined($res->json)) {
+            my $text = $res->message;
+            print STDERR "ERROR: Request API call failed: $code, $text\n";
+            return;
+         }
          my $text = $res->json->{text};
          # If code 429, retry with some sleep:
          if ($code == 429) {
@@ -433,9 +444,8 @@ sub post_stream ($self, $method, $api, $input, $params = undef, $cb = undef, $cb
    my $headers = $self->_headers($apikey, 'application/x-www-form-urlencoded');
 
    my $path = $endpoint.$api;
-   $input = url_escape($input);   # Build with OQL string
 
-   my $p= [];
+   my $p = [];
    push @$p, { k => 'k', v => $apikey };
    push @$p, { k => 'trackquery', v => 'true' } if $global->{api_trackquery};
    push @$p, { k => 'calculated', v => 'true' } if $global->{api_calculated};
@@ -591,6 +601,12 @@ RETRY:
    }
    unless ($res->is_success) {
       my $code = $res->code;
+      # Not JSON result:
+      unless (defined($res->json)) {
+         my $text = $res->message;
+         print STDERR "ERROR: Request API call failed: $code, $text\n";
+         return;
+      }
       my $text = $res->json->{text};
       # If code 429, retry with some sleep:
       if ($code == 429) {
@@ -660,8 +676,12 @@ sub ondemand ($self, $method, $api, $param, $post, $cb = undef, $cb_args = undef
 
    if (defined($param)) {
       $post->{maxscantime} = $param->{maxscantime} if defined $param->{maxscantime};
+      $post->{aslines} = $param->{aslines} ? 'true' : 'false' if defined $param->{aslines};
+      $post->{full} = $param->{full} ? 'true' : 'false' if defined $param->{full};
       $post->{urlscan} = $param->{urlscan} ? 'true' : 'false' if defined $param->{urlscan};
       $post->{vulnscan} = $param->{vulnscan} ? 'true' : 'false' if defined $param->{vulnscan};
+      $post->{riskscan} = $param->{riskscan} ? 'true' : 'false' if defined $param->{riskscan};
+      $post->{asm} = $param->{asm} ? 'true' : 'false' if defined $param->{asm};
       $post->{import} = $param->{import} ? 'true' : 'false' if defined $param->{import};
    }
 
@@ -686,6 +706,12 @@ RETRY:
    }
    unless ($res->is_success) {
       my $code = $res->code;
+      # Not JSON result:
+      unless (defined($res->json)) {
+         my $text = $res->message;
+         print STDERR "ERROR: Request API call failed: $code, $text\n";
+         return;
+      }
       #print Data::Dumper::Dumper($res->body)."\n";
       my $text = $res->json->{text};
       # If code 429, retry with some sleep:
@@ -699,8 +725,15 @@ RETRY:
       return;
    }
 
-   my $json = $res->json;
-   $cb->($json, $cb_args);
+   my $data;
+   if (defined($param) && $param->{aslines}) {
+      my @lines = split(/\r?\n/, $res->body);
+      $data = \@lines;
+   }
+   else {
+      $data = $res->json;
+   }
+   $cb->($data, $cb_args);
 
    return 1;
 }
