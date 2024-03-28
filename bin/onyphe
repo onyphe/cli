@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# $Id: onyphe,v 8e53a91709f9 2024/02/11 16:47:12 gomor $
+# $Id: onyphe,v 45178b147667 2024/03/27 14:29:16 gomor $
 #
 use strict;
 use warnings;
@@ -70,6 +70,8 @@ GetOptions(
    "ondemand-scope-ip-bulk=s" => \$lopts{'ondemand-scope-ip-bulk'}, # -ondemand-scope-ip-bulk INPUT.txt
    "ondemand-scope-domain=s" => \$lopts{'ondemand-scope-domain'}, # -ondemand-scope-domain DOMAIN
    "ondemand-scope-domain-bulk=s" => \$lopts{'ondemand-scope-domain-bulk'}, # -ondemand-scope-domain-bulk INPUT.txt
+   "ondemand-scope-hostname=s" => \$lopts{'ondemand-scope-hostname'}, # -ondemand-scope-hostname HOSTNAME
+   "ondemand-scope-hostname-bulk=s" => \$lopts{'ondemand-scope-hostname-bulk'}, # -ondemand-scope-hostname-bulk INPUT.txt
    "ondemand-scope-result=s" => \$lopts{'ondemand-scope-result'}, # -ondemand-scope-result ID
    "ondemand-resolver-domain=s" => \$lopts{'ondemand-resolver-domain'}, # -ondemand-resolver-domain DOMAIN
    "ondemand-resolver-result=s" => \$lopts{'ondemand-resolver-result'}, # -ondemand-resolver-result ID
@@ -299,6 +301,28 @@ elsif (defined($lopts{'ondemand-scope-domain-bulk'})) {
    $param->{import} = $lopts{import} if defined $lopts{import};
    $oa->ondemand_scope_domain_bulk($v, $param, $opp_perl_cb, $opl);
 }
+elsif (defined($lopts{'ondemand-scope-hostname'})) {
+   my $v = $lopts{'ondemand-scope-hostname'};
+   my $param;
+   $param->{maxscantime} = $lopts{maxscantime} if defined $lopts{maxscantime};
+   $param->{urlscan} = $lopts{urlscan} if defined $lopts{urlscan};
+   $param->{vulnscan} = $lopts{vulnscan} if defined $lopts{vulnscan};
+   $param->{riskscan} = $lopts{riskscan} if defined $lopts{riskscan};
+   $param->{asm} = $lopts{asm} if defined $lopts{asm};
+   $param->{import} = $lopts{import} if defined $lopts{import};
+   $oa->ondemand_scope_hostname($v, $param, $opp_perl_cb, $opl);
+}
+elsif (defined($lopts{'ondemand-scope-hostname-bulk'})) {
+   my $v = $lopts{'ondemand-scope-hostname-bulk'};
+   my $param;
+   $param->{maxscantime} = $lopts{maxscantime} if defined $lopts{maxscantime};
+   $param->{urlscan} = $lopts{urlscan} if defined $lopts{urlscan};
+   $param->{vulnscan} = $lopts{vulnscan} if defined $lopts{vulnscan};
+   $param->{riskscan} = $lopts{riskscan} if defined $lopts{riskscan};
+   $param->{asm} = $lopts{asm} if defined $lopts{asm};
+   $param->{import} = $lopts{import} if defined $lopts{import};
+   $oa->ondemand_scope_hostname_bulk($v, $param, $opp_perl_cb, $opl);
+}
 elsif (defined($lopts{'ondemand-scope-result'})) {
    my $v = $lopts{'ondemand-scope-result'};
    my $param;
@@ -400,6 +424,8 @@ APIs:
    -ondemand-scope-ip-bulk 'input.txt'                   use Ondemand Scope Ip Bulk API to launch a scan against a given list of IPs from an input file
    -ondemand-scope-domain 'DOMAIN'                       use Ondemand Scope Domain API to launch a scan against given domain
    -ondemand-scope-domain-bulk 'input.txt'               use Ondemand Scope Domain Bulk API to launch a scan against a given list of domain from an input file
+   -ondemand-scope-hostname 'HOSTNAME'                   use Ondemand Scope Hostname API to launch a scan against given hostname
+   -ondemand-scope-hostname-bulk 'input.txt'             use Ondemand Scope Hostname Bulk API to launch a scan against a given list of hostname from an input file
    -ondemand-scope-result \$scan_id                       use Ondemand Scope Result API with Scan ID
    -ondemand-resolver-domain 'DOMAIN'                    use Ondemand Resolver Domain API to launch a DNS enumeration and resolution against given domain
    -ondemand-resolver-result \$scan_id                    use Ondemand Resolver Result API with Scan ID

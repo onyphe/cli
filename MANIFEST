@@ -37,6 +37,7 @@ lib/OPP/Proc/Flatten.pm
 lib/OPP/Proc/Lookup.pm
 lib/OPP/Proc/Merge.pm
 lib/OPP/Proc/Noop.pm
+lib/OPP/Proc/Orlookup.pm
 lib/OPP/Proc/Output.pm
 lib/OPP/Proc/Pivots.pm
 lib/OPP/Proc.pm

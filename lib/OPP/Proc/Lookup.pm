@@ -1,5 +1,5 @@
 #
-# $Id: Lookup.pm,v e858e33dfc66 2023/12/07 09:58:09 gomor $
+# $Id: Lookup.pm,v 5e734a29f87b 2024/02/16 09:27:57 gomor $
 #
 package OPP::Proc::Lookup;
 use strict;
@@ -13,7 +13,7 @@ our $VERSION = '1.00';
 use File::Slurp qw(read_file);
 use Text::CSV_XS;
 use Net::IPv4Addr qw(ipv4_in_network);
-
+use Data::Dumper;
 
 sub _load {
    my $self = shift;
@@ -48,15 +48,17 @@ sub _load {
       while (my $line = $csvxs->getline($fd)) {
          my $last = pop @$line;  # Last field is the data to add
          my $key = join('+', sort { $a cmp $b } @$line);
-         $csv->{$header}{$key} = { $lookup_field => $last };
+         $csv->{$header}{lc($key)} = { $lookup_field => $last };
       }
-
-      #print STDERR Data::Dumper::Dumper($csv)."\n";
 
       $self->state->add('csv', $csv, $self->idx);
       $self->state->add('match_fields', $match_fields, $self->idx);
       $self->state->add('lookup_field', $lookup_field, $self->idx);
+      #print STDERR "match_fields[".Data::Dumper::Dumper($match_fields)."]\n";
+      #print STDERR "lookup_field[$lookup_field]\n";
    }
+
+   #print STDERR Data::Dumper::Dumper($csv)."\n";
 
    return [ $csv, $match_fields, $lookup_field ];
 }
@@ -99,13 +101,14 @@ sub process {
 
    # All fields to match against were found in input, we can search a match:
    for my $field (@$match_fields) {
+      #print STDERR "field1[$field]\n";
       my $values = $self->value($input, $field) or next;
       if ($field eq $cidr) {  # CIDR match mode
          for my $v (@$values) {
             for my $this (keys %{$csv->{$cidr}}) {
                if (ipv4_in_network($this, $v)) {
                   for my $k (keys %{$csv->{$field}{$this}}) {
-                     $self->set($input, $k, $csv->{$field}{$this}{$k});
+                     $self->set($input, $k, $csv->{$field}{$this}{$k}, 1);  # As ARRAY
                   }
                }
             }
@@ -113,9 +116,12 @@ sub process {
       }
       else {  # Exact match mode
          for my $v (@$values) {
-            if (defined($csv->{$field}) && defined($csv->{$field}{$v})) {
-               for my $k (keys %{$csv->{$field}{$v}}) {
-                  $self->set($input, $k, $csv->{$field}{$v}{$k});
+            #print STDERR "field2[$field] v[$v]\n";
+            if (defined($csv->{$field}) && defined($csv->{$field}{lc($v)})) {
+               #print STDERR "match\n";
+               for my $k (keys %{$csv->{$field}{lc($v)}}) {
+                  #print STDERR "field[$field] v[$v] k[$k]\n";
+                  $self->set($input, $k, $csv->{$field}{lc($v)}{$k}, 1); # As ARRAY
                }
             }
          }
@@ -141,7 +147,7 @@ OPP::Proc::Lookup - lookup processor
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2023, Patrice E<lt>GomoRE<gt> Auffret
+Copyright (c) 2024, Patrice E<lt>GomoRE<gt> Auffret
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

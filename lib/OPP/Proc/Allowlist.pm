@@ -1,5 +1,5 @@
 #
-# $Id: Allowlist.pm,v dd1d616d0c52 2024/01/24 15:23:37 gomor $
+# $Id: Allowlist.pm,v 1a6ad59d015b 2024/02/16 09:27:25 gomor $
 #
 package OPP::Proc::Allowlist;
 use strict;
@@ -43,7 +43,7 @@ sub _load {
          my $h = {};
          my $idx = 0;
          for my $this (@$header) {
-            $h->{$this} = $line->[$idx++];
+            $h->{$this} = lc($line->[$idx++]);
          }
          push @$csv, $h if keys %$h;
       }
@@ -105,7 +105,7 @@ sub process {
          else {  # Exact field match mode
             for my $v (@$values) {
                #print STDERR "*** match field [$field] vs v[$v]\n";
-               if (defined($line->{$field}) && $v eq $line->{$field}) {
+               if (defined($line->{$field}) && lc($v) eq $line->{$field}) {
                   $this_skip++;
                   last;
                }
@@ -138,7 +138,7 @@ OPP::Proc::Allowlist - allowlist processor
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2023, Patrice E<lt>GomoRE<gt> Auffret
+Copyright (c) 2024, Patrice E<lt>GomoRE<gt> Auffret
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

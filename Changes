@@ -1,5 +1,15 @@
 Revision history for Perl extension Onyphe.
 
+4.14 Thu 28 Mar 11:24:29 CET 2024
+  - New: Onyphe::Api: Ondemand Scope Hostname API
+  - New: Onyphe::Api: Ondemand Scope Hostname Bulk API
+  - New proc added: orlookup
+  - Bugfix: on printing errors from API calls (now handling text & JSON responses)
+  - Bugfix: lookup/allowlist/blocklist procs to be case insensitive
+  - Update: OPP::Proc: set() to accept writing fields as ARRAYs
+  - Update: addfield proc to support adding data to an existing field
+  - Update: OPP: pipeone() needs output flush at each round
+
 4.13 Sun 11 Feb 17:46:49 CET 2024
   - New: pipeone() function in OPP
   - New proc added: exists

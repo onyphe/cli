@@ -79,6 +79,9 @@ provides:
   OPP::Proc::Noop:
     file: lib/OPP/Proc/Noop.pm
     version: '1.00'
+  OPP::Proc::Orlookup:
+    file: lib/OPP/Proc/Orlookup.pm
+    version: '1.00'
   OPP::Proc::Output:
     file: lib/OPP/Proc/Output.pm
     version: '1.00'
@@ -111,10 +114,10 @@ provides:
     version: '1.00'
   Onyphe:
     file: lib/Onyphe.pm
-    version: '4.13'
+    version: '4.14'
   Onyphe::Api:
     file: lib/Onyphe/Api.pm
-    version: '4.13'
+    version: '4.14'
 requires:
   Carp: '0'
   Config::INI::Tiny: '0'
@@ -133,5 +136,5 @@ requires:
   Tie::IxHash: '0'
 resources:
   license: http://opensource.org/licenses/BSD-3-Clause
-version: '4.13'
+version: '4.14'
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

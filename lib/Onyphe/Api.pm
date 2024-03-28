@@ -1,11 +1,11 @@
 #
-# $Id: Api.pm,v 3e932e226ab4 2024/02/04 14:26:24 gomor $
+# $Id: Api.pm,v 45178b147667 2024/03/27 14:29:16 gomor $
 #
 package Onyphe::Api;
 use strict;
 use warnings;
 
-our $VERSION = '4.13';
+our $VERSION = '4.14';
 
 use experimental qw(signatures);
 
@@ -19,7 +19,7 @@ __PACKAGE__->cgBuildIndices;
 use File::Temp qw(tempfile);
 use File::Slurp qw(read_file);
 use Mojo::URL;
-use JSON::XS qw(encode_json);
+use JSON::XS qw(encode_json decode_json);
 use Mojo::UserAgent;
 use Mojo::Util qw(b64_encode url_escape);
 
@@ -173,8 +173,7 @@ sub request ($self, $api, $input = undef, $page = undef, $maxpage = undef, $para
             print STDERR "ERROR: Request API call failed: $code, $text\n";
             return;
          }
-
-         my $text = $res->json->{text};
+         my $json = $res->json;
          # If code 429, retry with some sleep:
          if ($code == 429) {
             print STDERR "WARNING: Too fast, sleeping before retry...\n" unless $self->silent;
@@ -182,7 +181,8 @@ sub request ($self, $api, $input = undef, $page = undef, $maxpage = undef, $para
             goto RETRY;
          }
          # Otherwise, stops and display error:
-         print STDERR "ERROR: Request API call failed: $code, $text\n" unless $self->silent;
+         print STDERR "ERROR: Request API call failed: $code, ".encode_json($json)."\n"
+            unless $self->silent;
          return;
       }
 
@@ -271,7 +271,7 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
             print STDERR "ERROR: Request API call failed: $code, $text\n";
             return;
          }
-         my $text = $res->json->{text};
+         my $json = $res->json;
          # If code 429, retry with some sleep:
          if ($code == 429) {
             print STDERR "WARNING: Too fast, sleeping before retry...\n" unless $self->silent;
@@ -279,7 +279,8 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
             goto RETRY;
          }
          # Otherwise, stops and display error:
-         print STDERR "ERROR: Request API call failed: $code, $text\n" unless $self->silent;
+         print STDERR "ERROR: Request API call failed: $code, ".encode_json($json)."\n"
+            unless $self->silent;
          return;
       }
 
@@ -604,10 +605,10 @@ RETRY:
       # Not JSON result:
       unless (defined($res->json)) {
          my $text = $res->message;
-         print STDERR "ERROR: Request API call failed: $code, $text\n";
+         print STDERR "ERROR: Alert API call failed: $code, $text\n";
          return;
       }
-      my $text = $res->json->{text};
+      my $json = $res->json;
       # If code 429, retry with some sleep:
       if ($code == 429) {
          print STDERR "WARNING: Too fast, sleeping before retry...\n" unless $self->silent;
@@ -615,7 +616,8 @@ RETRY:
          goto RETRY;
       }
       # Otherwise, stops and display error:
-      print STDERR "ERROR: Alert API call failed: $code, $text\n" unless $self->silent;
+      print STDERR "ERROR: Alert API call failed: $code, ".encode_json($json)."\n"
+         unless $self->silent;
       return;
    }
 
@@ -713,7 +715,7 @@ RETRY:
          return;
       }
       #print Data::Dumper::Dumper($res->body)."\n";
-      my $text = $res->json->{text};
+      my $json = $res->json;
       # If code 429, retry with some sleep:
       if ($code == 429) {
          print STDERR "WARNING: Too fast, sleeping before retry...\n" unless $self->silent;
@@ -721,7 +723,8 @@ RETRY:
          goto RETRY;
       }
       # Otherwise, stops and display error:
-      print STDERR "ERROR: Ondemand API call failed: $code, $text\n" unless $self->silent;
+      print STDERR "ERROR: Ondemand API call failed: $code, ".encode_json($json)."\n"
+         unless $self->silent;
       return;
    }
 
@@ -744,6 +747,10 @@ sub ondemand_scope_ip ($self, $target, $param = undef, $cb = undef, $cb_args = u
 
 sub ondemand_scope_domain ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
    return $self->ondemand('post', '/ondemand/scope/domain/single', $param, { domain => $target }, $cb, $cb_args);
+}
+
+sub ondemand_scope_hostname ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
+   return $self->ondemand('post', '/ondemand/scope/hostname/single', $param, { hostname => $target }, $cb, $cb_args);
 }
 
 sub ondemand_scope_ip_bulk ($self, $file, $param = undef, $cb = undef, $cb_args = undef) {
@@ -782,6 +789,24 @@ sub ondemand_scope_domain_bulk ($self, $file, $param = undef, $cb = undef, $cb_a
    return $self->ondemand('post', '/ondemand/scope/domain/bulk', $param, { domain => $target }, $cb, $cb_args);
 }
 
+sub ondemand_scope_hostname_bulk ($self, $file, $param = undef, $cb = undef, $cb_args = undef) {
+   if (! -f $file) {
+      print STDERR "ERROR: Ondemand Scope Hostname Bulk needs a file as input\n"
+         unless $self->silent;
+   }
+
+   my @lines = read_file($file);
+   for (@lines) { chomp };
+   unless (@lines) {
+      print STDERR "ERROR: Ondemand Scope Hostname Bulk needs a file with content\n"
+         unless $self->silent;
+   }
+
+   my $target = join(',', @lines);
+
+   return $self->ondemand('post', '/ondemand/scope/hostname/bulk', $param, { hostname => $target }, $cb, $cb_args);
+}
+
 sub ondemand_scope_result ($self, $scan_id, $param = undef, $cb = undef, $cb_args = undef) {
    return $self->ondemand('get', '/ondemand/scope/result/'.$scan_id, $param, undef, $cb, $cb_args);
 }
@@ -812,7 +837,7 @@ Onyphe::Api - ONYPHE API
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2023, ONYPHE
+Copyright (c) 2024, ONYPHE SAS
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

@@ -1,5 +1,5 @@
 #
-# $Id: OPP.pm,v 06a2fc71a0d8 2023/11/10 11:06:24 gomor $
+# $Id: OPP.pm,v dd33ef647b17 2024/03/14 13:56:07 gomor $
 #
 package OPP;
 use strict;
@@ -250,8 +250,8 @@ sub pipeone {
 
    if (defined($self->output->docs)) {
       my $docs = $self->unflatten($self->output->docs);
+      $self->output->flush;
       return $docs;
-      #$self->output->flush;  # Don't flush output when processed, let user's do it
    }
 
    return;
