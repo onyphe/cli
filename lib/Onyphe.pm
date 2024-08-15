@@ -1,11 +1,11 @@
 #
-# $Id: Onyphe.pm,v 1a6ad59d015b 2024/02/16 09:27:25 gomor $
+# $Id: Onyphe.pm,v 2a4e09d0b48b 2024/08/08 13:34:07 gomor $
 #
 package Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '4.14';
+our $VERSION = '4.15';
 
 use experimental qw(signatures);
 
@@ -42,6 +42,7 @@ sub init ($self, $file = undef) {
    $config->{''}{api_keepalive} ||= 0;
    $config->{''}{api_endpoint} ||= 'https://www.onyphe.io/api/v2';
    $config->{''}{api_ondemand_endpoint} ||= $config->{''}{api_endpoint};
+   $config->{''}{api_asd_endpoint} ||= $config->{''}{api_endpoint};
 
    if ($self->verbose) {
       for my $k (keys %{$config->{''}}) {

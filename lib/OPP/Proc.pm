@@ -1,5 +1,5 @@
 #
-# $Id: Proc.pm,v 683f32a81df6 2024/03/07 08:31:39 gomor $
+# $Id: Proc.pm,v c0575c37c27d 2024/05/06 13:15:26 james $
 #
 package OPP::Proc;
 use strict;
@@ -253,9 +253,9 @@ sub placeholder {
       my $values = $self->value($flat, $holder);
       for my $value (@$values) {
          while ($copy =~ s{(\S+)\s*:\s*\$$holder}{$1:$value}) { }
-         $searches{$copy}++;  # Make them unique
       }
    }
+   $searches{$copy}++;  # Make them unique
 
    return [ keys %searches ];
 }

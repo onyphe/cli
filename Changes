@@ -1,5 +1,16 @@
 Revision history for Perl extension Onyphe.
 
+4.15 Thu 15 Aug 13:22:56 CEST 2024
+  - New: Onyphe::Api: Ondemand Scope Port Single API
+  - New: Onyphe::Api: ASD Tld API
+  - New: Onyphe::Api: ASD Ns API
+  - New: Onyphe::Api: ASD Task API
+  - New: Onyphe::Api: added support for ASD Tld API
+  - New: Onyphe::Api: support for displaying total number of results when using Search API
+  - New: Onyphe::Api: support for POST Export API calls
+  - New: onyphe: -trusted argument
+  - Bugfix: OPP: catch errors on decoding or encoding JSON content
+
 4.14 Thu 28 Mar 11:24:29 CET 2024
   - New: Onyphe::Api: Ondemand Scope Hostname API
   - New: Onyphe::Api: Ondemand Scope Hostname Bulk API

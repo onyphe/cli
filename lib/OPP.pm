@@ -1,5 +1,5 @@
 #
-# $Id: OPP.pm,v dd33ef647b17 2024/03/14 13:56:07 gomor $
+# $Id: OPP.pm,v 3a89adb8d30e 2024/08/09 08:44:28 gomor $
 #
 package OPP;
 use strict;
@@ -333,7 +333,15 @@ sub to_json {
    for (@$doc) {
       my $docs = $self->order($_) or next;
       for my $doc (@$docs) {
-         push @json, encode_json($doc);
+         my $json;
+         eval {
+            $json = encode_json($doc);
+         };
+         if ($@) {  # Silently discard in case of error
+            next;
+         }
+         next unless defined $json;
+         push @json, $json;
       }
    }
 
@@ -342,12 +350,22 @@ sub to_json {
 
 sub from_json {
    my $self = shift;
-   my ($doc) = @_;
+   my ($docs) = @_;
 
-   $doc = ref($doc) eq 'ARRAY' ? $doc : [ $doc ];
+   $docs = ref($docs) eq 'ARRAY' ? $docs : [ $docs ];
 
    my @json = ();
-   push @json, decode_json($_) for @$doc;
+   for my $doc (@$docs) {
+      my $json;
+      eval {
+         $json = decode_json($doc);
+      };
+      if ($@) {  # Silently discard in case of error
+         next;
+      }
+      next unless defined $json;
+      push @json, $json;
+   }
 
    return $self->order(\@json);
 }
