@@ -1,11 +1,11 @@
 #
-# $Id: Api.pm,v cc27ffa878bb 2024/08/15 09:32:51 gomor $
+# $Id: Api.pm,v 7517f7691810 2024/08/16 15:30:45 gomor $
 #
 package Onyphe::Api;
 use strict;
 use warnings;
 
-our $VERSION = '4.15';
+our $VERSION = '4.16';
 
 use experimental qw(signatures);
 
@@ -845,6 +845,24 @@ sub ondemand_resolver_ip ($self, $target, $param = undef, $cb = undef, $cb_args 
 
 sub ondemand_resolver_domain ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
    return $self->ondemand('post', '/ondemand/resolver/domain/single', $param, { domain => $target }, $cb, $cb_args);
+}
+
+sub ondemand_resolver_domain_bulk ($self, $file, $param = undef, $cb = undef, $cb_args = undef) {
+   if (! -f $file) {
+      print STDERR "ERROR: Ondemand Resolver Domain Bulk needs a file as input\n"
+         unless $self->silent;
+   }
+
+   my @lines = read_file($file);
+   for (@lines) { chomp };
+   unless (@lines) {
+      print STDERR "ERROR: Ondemand Resolver Domain Bulk needs a file with content\n"
+         unless $self->silent;
+   }
+
+   my $target = join(',', @lines);
+
+   return $self->ondemand('post', '/ondemand/resolver/domain/bulk', $param, { domain => $target }, $cb, $cb_args);
 }
 
 sub ondemand_resolver_hostname ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
