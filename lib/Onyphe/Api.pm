@@ -1,5 +1,5 @@
 #
-# $Id: Api.pm,v 7517f7691810 2024/08/16 15:30:45 gomor $
+# $Id: Api.pm,v 462dcd9243b5 2024/10/31 09:09:10 gomor $
 #
 package Onyphe::Api;
 use strict;
@@ -703,6 +703,7 @@ sub ondemand ($self, $method, $api, $param, $post, $cb = undef, $cb_args = undef
    if (defined($param)) {
       $post->{maxscantime} = $param->{maxscantime} if defined $param->{maxscantime};
       $post->{aslines} = $param->{aslines} ? 'true' : 'false' if defined $param->{aslines};
+      $post->{aslink} = $param->{aslink} ? 'true' : 'false' if defined $param->{aslink};
       $post->{full} = $param->{full} ? 'true' : 'false' if defined $param->{full};
       $post->{urlscan} = $param->{urlscan} ? 'true' : 'false' if defined $param->{urlscan};
       $post->{vulnscan} = $param->{vulnscan} ? 'true' : 'false' if defined $param->{vulnscan};
@@ -967,6 +968,10 @@ sub asd_tld ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
 
 sub asd_ns ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
    return $self->asd('post', '/asd/ns', $param, { domain => $target }, $cb, $cb_args);
+}
+
+sub asd_mx ($self, $target, $param = undef, $cb = undef, $cb_args = undef) {
+   return $self->asd('post', '/asd/mx', $param, { domain => $target }, $cb, $cb_args);
 }
 
 sub asd_task ($self, $taskid, $param = undef, $cb = undef, $cb_args = undef) {

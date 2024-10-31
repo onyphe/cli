@@ -1,5 +1,5 @@
 #
-# $Id: Onyphe.pm,v 605f620b219f 2024/08/15 15:08:26 gomor $
+# $Id: Onyphe.pm,v 462dcd9243b5 2024/10/31 09:09:10 gomor $
 #
 package Onyphe;
 use strict;
@@ -69,7 +69,7 @@ Onyphe - ONYPHE base class
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2023, ONYPHE
+Copyright (c) 2024, ONYPHE SAS
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

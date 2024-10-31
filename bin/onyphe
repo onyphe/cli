@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# $Id: onyphe,v 7517f7691810 2024/08/16 15:30:45 gomor $
+# $Id: onyphe,v 462dcd9243b5 2024/10/31 09:09:10 gomor $
 #
 use strict;
 use warnings;
@@ -40,6 +40,7 @@ GetOptions(
    #"poll" => \$lopts{poll},               # -poll
    "maxscantime=i" => \$lopts{'maxscantime'}, # -maxscantime 120
    "aslines=i" => \$lopts{'aslines'}, # -aslines 1
+   "aslink=i" => \$lopts{'aslink'}, # -aslink 1
    "full=i" => \$lopts{'full'}, # -full 1
    "urlscan=i" => \$lopts{'urlscan'}, # -urlscan 1
    "vulnscan=i" => \$lopts{'vulnscan'}, # -vulnscan 1
@@ -80,6 +81,7 @@ GetOptions(
    "ondemand-resolver-result=s" => \$lopts{'ondemand-resolver-result'}, # -ondemand-resolver-result ID
    "asd-tld=s" => \$lopts{'asd-tld'},  # -asd-tld DOMAIN1,DOMAIN2 | input.txt
    "asd-ns=s" => \$lopts{'asd-ns'},  # -asd-ns DOMAIN1,DOMAIN2 | input.txt
+   "asd-mx=s" => \$lopts{'asd-mx'},  # -asd-mx DOMAIN1,DOMAIN2 | input.txt
    "asd-task=s" => \$lopts{'asd-task'},  # -asd-task TASKID
 ) or exit(0);
 
@@ -350,6 +352,7 @@ elsif (defined($lopts{'ondemand-scope-result'})) {
    my $v = $lopts{'ondemand-scope-result'};
    my $param;
    $param->{aslines} = $lopts{aslines} if defined $lopts{aslines};
+   $param->{aslink} = $lopts{aslink} if defined $lopts{aslink};
    $param->{full} = $lopts{full} if defined $lopts{full};
    if ($param->{aslines}) {
       $oa->ondemand_scope_result($v, $param, $opp_json_cb, $opl);
@@ -421,6 +424,25 @@ elsif (defined($lopts{'asd-ns'})) {
       $oa->asd_ns($v, $param, $opp_perl_cb, $opl);
    }
 }
+elsif (defined($lopts{'asd-mx'})) {
+   my $v = $lopts{'asd-mx'};
+   my $param;
+   $param->{aslines} = $lopts{aslines} if defined $lopts{aslines};
+   if (-f $v) {  # If its a file, we create the list of values to push
+      my $list = $oa->asd_load_input($v);
+      unless (defined($list) && @$list) {
+         print STDERR "VERBOSE: asd_load_input: failed from bad content or empty content\n";
+         exit(1);
+      }
+      $v = $list;
+   }
+   if ($param->{aslines}) {
+      $oa->asd_mx($v, $param, $opp_json_cb, $opl);
+   }
+   else {
+      $oa->asd_mx($v, $param, $opp_perl_cb, $opl);
+   }
+}
 elsif (defined($lopts{'asd-task'})) {
    my $v = $lopts{'asd-task'};
    my $param;
@@ -484,9 +506,9 @@ APIs:
    -summary domain 'DOMAIN | OPP'                        use domain Summary API for query
    -summary hostname 'HOSTNAME | OPP'                    use hostname Summary API for query
    -bulk-summary <ip|domain|hostname> 'input.txt | OPP'  use Bulk Summary API for query
-   -alert-list                                           use Alert API for query
-   -alert-del \$id                                        use Alert API for query
-   -alert-add -alert-name NAME -alert-email EMAIL 'OQL'  use Alert API for query
+   -alert-list                                           use Alert List API to list configured alerts
+   -alert-del \$id                                        use Alert Del API to remove an alert
+   -alert-add -alert-name NAME -alert-email EMAIL 'OQL'  use Alert Add API to create a new alert
    -ondemand-scope-ip '<IP|CIDR>'              use Ondemand Scope IP API to launch a scan against IP or CIDR
    -ondemand-scope-ip-bulk 'input.txt'         use Ondemand Scope Ip Bulk API to launch a scan against a given list of IPs from an input file
    -ondemand-scope-domain 'DOMAIN'             use Ondemand Scope Domain API to launch a scan against given domain
@@ -500,6 +522,7 @@ APIs:
    -ondemand-resolver-result \$scan_id          use Ondemand Resolver Result API with Scan ID
    -asd-tld DOMAIN1,DOMAIN2,...|input.txt   use ASD Tld API to find related domains by TLDs
    -asd-ns DOMAIN1,DOMAIN2,...|input.txt    use ASD Ns API to find related domains by using nameservers
+   -asd-mx DOMAIN1,DOMAIN2,...|input.txt    use ASD Mx API to find related domains by using MX records
    -asd-task TASKID                         use ASD Task API to retrieve an ASD Task results
 
 EOF
