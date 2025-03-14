@@ -21,9 +21,28 @@ then
    if [[ ! -f ~/.onyphe.ini ]]
    then
       echo "*** Creating .onyphe.ini squeleton..."
-      echo 'api_endpoint = https://www.onyphe.io/api/v2' > ~/.onyphe.ini
+      echo '# General APIs:' > ~/.onyphe.ini
+      echo 'api_endpoint = https://www.onyphe.io/api/v2' >> ~/.onyphe.ini
       echo "api_key = $APIKEY" >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# Unrated General APIs option:' >> ~/.onyphe.ini
+      echo '#api_unrated_endpoint = https://www.onyphe.io/unrated/api/v2' >> ~/.onyphe.ini
+      echo '#api_unrated_email = youremail@yourdomain.lan' >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# Ondemand APIs:' >> ~/.onyphe.ini
+      echo 'api_ondemand_endpoint = https://www.onyphe.io/api/v3' >> ~/.onyphe.ini
+      echo "api_ondemand_key = $APIKEY" >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# ASD APIs:' >> ~/.onyphe.ini
+      echo 'api_asd_endpoint = https://www.onyphe.io/api/v1' >> ~/.onyphe.ini
+      echo "api_asd_key =  $APIKEY" >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# Tunables:' >> ~/.onyphe.ini
       echo 'api_maxpage = 1000' >> ~/.onyphe.ini
+      echo '#api_size = 100' >> ~/.onyphe.ini
+      echo '#api_trackquery = 1' >> ~/.onyphe.ini
+      echo '#api_calculated = 1' >> ~/.onyphe.ini
+      echo '#api_keepalive = 0' >> ~/.onyphe.ini
       echo "*** Creating .onyphe.ini squeleton...done"
       echo ''
    fi
@@ -39,9 +58,28 @@ else
    if [[ ! -f ~/.onyphe.ini ]]
    then
       echo "*** Creating .onyphe.ini squeleton..."
-      echo 'api_endpoint = https://www.onyphe.io/api/v2' > ~/.onyphe.ini
+      echo '# General APIs:' > ~/.onyphe.ini
+      echo 'api_endpoint = https://www.onyphe.io/api/v2' >> ~/.onyphe.ini
       echo "api_key = $APIKEY" >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# Unrated General APIs option:' >> ~/.onyphe.ini
+      echo '#api_unrated_endpoint = https://www.onyphe.io/unrated/api/v2' >> ~/.onyphe.ini
+      echo '#api_unrated_email = youremail@yourdomain.lan' >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# Ondemand APIs:' >> ~/.onyphe.ini
+      echo 'api_ondemand_endpoint = https://www.onyphe.io/api/v3' >> ~/.onyphe.ini
+      echo "api_ondemand_key = $APIKEY" >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# ASD APIs:' >> ~/.onyphe.ini
+      echo 'api_asd_endpoint = https://www.onyphe.io/api/v1' >> ~/.onyphe.ini
+      echo "api_asd_key =  $APIKEY" >> ~/.onyphe.ini
+      echo '' >> ~/.onyphe.ini
+      echo '# Tunables:' >> ~/.onyphe.ini
       echo 'api_maxpage = 1000' >> ~/.onyphe.ini
+      echo '#api_size = 100' >> ~/.onyphe.ini
+      echo '#api_trackquery = 1' >> ~/.onyphe.ini
+      echo '#api_calculated = 1' >> ~/.onyphe.ini
+      echo '#api_keepalive = 0' >> ~/.onyphe.ini
       echo "*** Creating .onyphe.ini squeleton...done"
       echo ''
    fi
