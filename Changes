@@ -1,5 +1,13 @@
 Revision history for Perl extension Onyphe.
 
+4.19.1 Wed 14 May 09:41:31 CEST 2025
+   - WARNING: ASD APIs are still BETA and interface may be subject to change
+   - Bugfix: onyphe: oql | opl split: splits on first pipe outside of double-quotes in order to allow for -regexp functions
+   - Bugfix: Onyphe::Opp::Proc: fixed handling of some nested fields
+   - Bugfix: Onyphe::Api: use UTF-8 mode when reading files
+   - Update: onyphe: -verbose 1 for some ASD APIs
+   - New: Onyphe::Api: Bootstrap Certso Wildcard, Ip Domain, IP Certso, Web Subdomain Domain ASD APIs
+
 4.19.0 Fri 14 Mar 16:23:17 CET 2025
   - WARNING: ASD APIs are still BETA and interface may be subject to change
   - Bugfix: onyphe: -asd-pivot-query needs -field param

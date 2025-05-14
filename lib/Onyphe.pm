@@ -1,11 +1,11 @@
 #
-# $Id: Onyphe.pm,v 70c24256e451 2025/03/05 16:13:54 gomor $
+# $Id: Onyphe.pm,v 177c0e7f0de9 2025/05/14 07:41:53 gomor $
 #
 package Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '4.19.0';
+our $VERSION = '4.19.1';
 
 use experimental qw(signatures);
 

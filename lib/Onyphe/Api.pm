@@ -1,11 +1,11 @@
 #
-# $Id: Api.pm,v 184b7baee9fd 2025/03/14 14:27:03 gomor $
+# $Id: Api.pm,v 177c0e7f0de9 2025/05/14 07:41:53 gomor $
 #
 package Onyphe::Api;
 use strict;
 use warnings;
 
-our $VERSION = '4.19.0';
+our $VERSION = '4.19.1';
 
 use experimental qw(signatures);
 
@@ -557,8 +557,9 @@ sub bulk_discovery ($self, $api, $file, $oql = undef, $params = undef, $cb = und
    # Rewrite to another file when oql is given:
    my ($fh, $filename);
    if (defined($oql)) {
-      my @lines = read_file($file);
+      my @lines = read_file($input, { binmode => ':encoding(UTF-8)' });
       ($fh, $filename) = tempfile();
+      binmode($fh, ":utf8");
       $input = $filename;
       for (@lines) {
          chomp;
@@ -807,7 +808,7 @@ sub ondemand_scope_ip_bulk ($self, $file, $param = undef, $cb = undef, $cb_args 
          unless $self->silent;
    }
 
-   my @lines = read_file($file);
+   my @lines = read_file($file, { binmode => ':encoding(UTF-8)' });
    for (@lines) { chomp };
    unless (@lines) {
       print STDERR "ERROR: Ondemand Scope Ip Bulk needs a file with content\n"
@@ -825,7 +826,7 @@ sub ondemand_scope_domain_bulk ($self, $file, $param = undef, $cb = undef, $cb_a
          unless $self->silent;
    }
 
-   my @lines = read_file($file);
+   my @lines = read_file($file, { binmode => ':encoding(UTF-8)' });
    for (@lines) { chomp };
    unless (@lines) {
       print STDERR "ERROR: Ondemand Scope Domain Bulk needs a file with content\n"
@@ -843,7 +844,7 @@ sub ondemand_scope_hostname_bulk ($self, $file, $param = undef, $cb = undef, $cb
          unless $self->silent;
    }
 
-   my @lines = read_file($file);
+   my @lines = read_file($file, { binmode => ':encoding(UTF-8)' });
    for (@lines) { chomp };
    unless (@lines) {
       print STDERR "ERROR: Ondemand Scope Hostname Bulk needs a file with content\n"
@@ -873,7 +874,7 @@ sub ondemand_resolver_domain_bulk ($self, $file, $param = undef, $cb = undef, $c
          unless $self->silent;
    }
 
-   my @lines = read_file($file);
+   my @lines = read_file($file, { binmode => ':encoding(UTF-8)' });
    for (@lines) { chomp };
    unless (@lines) {
       print STDERR "ERROR: Ondemand Resolver Domain Bulk needs a file with content\n"
@@ -927,6 +928,7 @@ sub asd ($self, $method, $api, $param, $post, $cb = undef, $cb_args = undef) {
    if (defined($param)) {
       $post->{domain} = $param->{domain} if defined $param->{domain};
       $post->{aslines} = $param->{aslines} ? 'true' : 'false' if defined $param->{aslines};
+      $post->{verbose} = $param->{verbose} ? 'true' : 'false' if defined $param->{verbose};
       $post->{astask} = $param->{astask} ? 'true' : 'false' if defined $param->{astask};
       $post->{trusted} = $param->{trusted} ? 'true' : 'false' if defined $param->{trusted};
       $post->{field} = $param->{field} if defined $param->{field};
@@ -1007,6 +1009,7 @@ sub _load_file ($self, $arg) {
    }
    else {
       $arg = [ split(',', $arg) ];
+      #$arg = [ $arg ];
    }
 
    return $arg;
@@ -1026,22 +1029,10 @@ sub asd_pivot_query ($self, $arg, $param = undef, $cb = undef, $cb_args = undef)
    return $self->asd('post', '/asd/pivot/query', $param, { query => $arg }, $cb, $cb_args);
 }
 
-sub asd_domain_tld ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+sub asd_bootstrap_certso_wildcard ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
    $arg = $self->_load_file($arg);
-   $arg = $self->_arg_from_field($arg, 'domain');
-   return $self->asd('post', '/asd/domain/tld', $param, { domain => $arg }, $cb, $cb_args);
-}
-
-sub asd_dns_domain_ns ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
-   $arg = $self->_load_file($arg);
-   $arg = $self->_arg_from_field($arg, 'domain');
-   return $self->asd('post', '/asd/dns/domain/ns', $param, { domain => $arg }, $cb, $cb_args);
-}
-
-sub asd_dns_domain_mx ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
-   $arg = $self->_load_file($arg);
-   $arg = $self->_arg_from_field($arg, 'domain');
-   return $self->asd('post', '/asd/dns/domain/mx', $param, { domain => $arg }, $cb, $cb_args);
+   $arg = $self->_arg_from_field($arg, 'subject.organization');
+   return $self->asd('post', '/asd/bootstrap/certso/wildcard', $param, { certso => $arg }, $cb, $cb_args);
 }
 
 sub asd_certso_domain ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
@@ -1074,6 +1065,18 @@ sub asd_org_inventory ($self, $arg, $param = undef, $cb = undef, $cb_args = unde
    return $self->asd('post', '/asd/org/inventory', $param, { inventory => $arg }, $cb, $cb_args);
 }
 
+sub asd_ip_domain ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/ip/domain', $param, { domain => $arg }, $cb, $cb_args);
+}
+
+sub asd_ip_certso ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'subject.organization');
+   return $self->asd('post', '/asd/ip/certso', $param, { certso => $arg }, $cb, $cb_args);
+}
+
 sub asd_ip_inventory ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
    $arg = $self->_load_file($arg);
    $arg = $self->_arg_from_inventory($arg, 'domain');
@@ -1098,10 +1101,40 @@ sub asd_score_inventory ($self, $arg, $param = undef, $cb = undef, $cb_args = un
    return $self->asd('post', '/asd/score/inventory', $param, { inventory => $arg }, $cb, $cb_args);
 }
 
+sub asd_dns_domain_mx ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/dns/domain/mx', $param, { domain => $arg }, $cb, $cb_args);
+}
+
 sub asd_dns_domain_soa ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
    $arg = $self->_load_file($arg);
    $arg = $self->_arg_from_field($arg, 'domain');
    return $self->asd('post', '/asd/dns/domain/soa', $param, { domain => $arg }, $cb, $cb_args);
+}
+
+sub asd_dns_domain_ns ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/dns/domain/ns', $param, { domain => $arg }, $cb, $cb_args);
+}
+
+sub asd_dns_domain_exist ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/dns/domain/exist', $param, { domain => $arg }, $cb, $cb_args);
+}
+
+sub asd_dns_domain_ns_exist ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/dns/domain/ns/exist', $param, { domain => $arg }, $cb, $cb_args);
+}
+
+sub asd_domain_tld ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/domain/tld', $param, { domain => $arg }, $cb, $cb_args);
 }
 
 sub asd_domain_wildcard ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
@@ -1116,10 +1149,16 @@ sub asd_domain_certso ($self, $arg, $param = undef, $cb = undef, $cb_args = unde
    return $self->asd('post', '/asd/domain/certso', $param, { certso => $arg }, $cb, $cb_args);
 }
 
-sub asd_dns_domain_exist ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+sub asd_domain_exist ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
    $arg = $self->_load_file($arg);
    $arg = $self->_arg_from_field($arg, 'domain');
-   return $self->asd('post', '/asd/dns/domain/exist', $param, { domain => $arg }, $cb, $cb_args);
+   return $self->asd('post', '/asd/domain/exist', $param, { domain => $arg }, $cb, $cb_args);
+}
+
+sub asd_web_subdomain_domain ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/web/subdomain/domain', $param, { domain => $arg }, $cb, $cb_args);
 }
 
 sub asd_task_id ($self, $taskid, $param = undef, $cb = undef, $cb_args = undef) {
@@ -1140,7 +1179,7 @@ sub asd_task_kill ($self, $taskid, $param = undef, $cb = undef, $cb_args = undef
 
 sub asd_load_input ($self, $input) {
    my $docs = [];
-   my @lines = read_file($input);
+   my @lines = read_file($input, { binmode => ':encoding(UTF-8)' });
    for (@lines) {
       chomp;
       unless ($_ =~ m{[=:]}) {  # Need a key:value pair

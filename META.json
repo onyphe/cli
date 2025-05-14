@@ -178,11 +178,11 @@
       },
       "Onyphe" : {
          "file" : "lib/Onyphe.pm",
-         "version" : "v4.19.0"
+         "version" : "v4.19.1"
       },
       "Onyphe::Api" : {
          "file" : "lib/Onyphe/Api.pm",
-         "version" : "v4.19.0"
+         "version" : "v4.19.1"
       }
    },
    "release_status" : "stable",
@@ -191,6 +191,6 @@
          "http://opensource.org/licenses/BSD-3-Clause"
       ]
    },
-   "version" : "v4.19.0",
-   "x_serialization_backend" : "JSON::PP version 4.06"
+   "version" : "v4.19.1",
+   "x_serialization_backend" : "JSON::PP version 4.02"
 }

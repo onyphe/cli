@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# $Id: onyphe,v 6200d9520468 2025/03/14 14:28:43 gomor $
+# $Id: onyphe,v 23d8bc285bd6 2025/05/09 11:29:00 gomor $
 #
 use strict;
 use warnings;
@@ -88,12 +88,17 @@ GetOptions(
    "ondemand-resolver-result=s" => \$lopts{'ondemand-resolver-result'},
    # ASD APIs:
    "asd-pivot-query=s" => \$lopts{'asd-pivot-query'},
+   "asd-bootstrap-certso-wildcard=s" => \$lopts{'asd-bootstrap-certso-wildcard'},
    "asd-domain-tld=s" => \$lopts{'asd-domain-tld'},
    "asd-domain-certso=s" => \$lopts{'asd-domain-certso'},
    "asd-domain-wildcard=s" => \$lopts{'asd-domain-wildcard'},
+   "asd-domain-exist=s" => \$lopts{'asd-domain-exist'},
+   "asd-web-subdomain-domain=s" => \$lopts{'asd-web-subdomain-domain'},
    "asd-certso-domain=s" => \$lopts{'asd-certso-domain'},
    "asd-certso-wildcard=s" => \$lopts{'asd-certso-wildcard'},
    "asd-org-inventory=s" => \$lopts{'asd-org-inventory'},
+   "asd-ip-domain=s" => \$lopts{'asd-ip-domain'},
+   "asd-ip-certso=s" => \$lopts{'asd-ip-certso'},
    "asd-ip-inventory=s" => \$lopts{'asd-ip-inventory'},
    "asd-subnet-inventory=s" => \$lopts{'asd-subnet-inventory'},
    "asd-vhost-inventory=s" => \$lopts{'asd-vhost-inventory'},
@@ -102,6 +107,7 @@ GetOptions(
    "asd-dns-domain-mx=s" => \$lopts{'asd-dns-domain-mx'},
    "asd-dns-domain-soa=s" => \$lopts{'asd-dns-domain-soa'},
    "asd-dns-domain-exist=s" => \$lopts{'asd-dns-domain-exist'},
+   "asd-dns-domain-ns-exist=s" => \$lopts{'asd-dns-domain-ns-exist'},
    "asd-task-id=s" => \$lopts{'asd-task-id'},
    "asd-task-poll=s" => \$lopts{'asd-task-poll'},
    "asd-task-list" => \$lopts{'asd-task-list'},
@@ -122,7 +128,34 @@ $oa->verbose(1) if $lopts{verbose};
 
 my $arg = pop @ARGV;  # Global argument
 
-my ($oql, $opl) = split(/\s*\|\s*/, $arg, 2) if defined $arg;
+#my ($oql, $opl) = split(/\s*\|\s*/, $arg, 2) if defined $arg;
+my ($oql, $opl);
+
+if (defined $arg) {
+    my $quoted = 0;
+
+    for (my $i = 0; $i < length($arg); $i++) {
+        my $c = substr($arg, $i, 1);
+        $quoted ^= 1 if $c eq '"';  # Toggle quoted state on each double-quote
+        if (!$quoted && $c eq '|') {
+            $oql = substr($arg, 0, $i);
+            $opl = substr($arg, $i + 1);
+            last;
+        }
+    }
+
+    # Fallback if no unquoted pipe is found
+    if (!defined $oql) {
+        $oql = $arg;
+        $opl = '';
+    }
+
+    # Trim whitespace
+    for ($oql, $opl) {
+        s/^\s+//;
+        s/\s+$//;
+    }
+}
 
 $oa->init($lopts{config}) or die("FATAL: cannot initialize Onyphe::Api\n");
 
@@ -442,6 +475,7 @@ elsif (defined($asd_api_opt)) {
       $params->{trusted} = $lopts{trusted} if defined $lopts{trusted};
       $params->{includep} = $lopts{includep} if defined $lopts{includep};
       $params->{excludep} = $lopts{excludep} if defined $lopts{excludep};
+      $params->{verbose} = $lopts{verbose} if defined $lopts{verbose};
       $oa->$asd_api_func($v, $params, $opp_cb, $opl);
    }
 }
@@ -508,27 +542,32 @@ General APIs:
 
 Ondemand APIs:
 
-   -ondemand-scope-ip '<IP|CIDR>'              launch a scan against IP or CIDR
-   -ondemand-scope-ip-bulk 'input.txt'         launch a scan against a given list of IPs from an input file
-   -ondemand-scope-domain 'DOMAIN'             launch a scan against given domain
-   -ondemand-scope-domain-bulk 'input.txt'     launch a scan against a given list of domain from an input file
-   -ondemand-scope-hostname 'HOSTNAME'         launch a scan against given hostname
-   -ondemand-scope-hostname-bulk 'input.txt'   launch a scan against a given list of hostname from an input file
-   -ondemand-scope-port PORT                   launch a scan against a given port on full IPv4 address space
-   -ondemand-scope-result SCAN_ID              retrieve a scope scan results given a scan ID
-   -ondemand-resolver-domain 'DOMAIN'          launch a DNS enumeration and resolution against given domain
-   -ondemand-resolver-domain-bulk 'input.txt'  launch a DNS enumeration and resolution against a given list of domain from an input file
-   -ondemand-resolver-result SCAN_ID           retrieve a resolver scan results given a scan ID
+   -ondemand-scope-ip IP|CIDR                launch a scan against IP or CIDR
+   -ondemand-scope-ip-bulk input.txt         launch a scan against a given list of IPs from an input file
+   -ondemand-scope-domain DOMAIN             launch a scan against given domain
+   -ondemand-scope-domain-bulk input.txt     launch a scan against a given list of domain from an input file
+   -ondemand-scope-hostname HOSTNAME         launch a scan against given hostname
+   -ondemand-scope-hostname-bulk input.txt   launch a scan against a given list of hostname from an input file
+   -ondemand-scope-port PORT                 launch a scan against a given port on full IPv4 address space
+   -ondemand-scope-result SCAN_ID            retrieve a scope scan results given a scan ID
+   -ondemand-resolver-domain DOMAIN          launch a DNS enumeration and resolution against given domain
+   -ondemand-resolver-domain-bulk input.txt  launch a DNS enumeration and resolution against a given list of domain from an input file
+   -ondemand-resolver-result SCAN_ID         retrieve a resolver scan results given a scan ID
 
 ASD APIs:
 
-   -asd-pivot-query OQL -field FIELD               search unique value(s) for a given field from an OQL query
-   -asd-domain-tld DOMAIN1,DOMAIN2,...|input.txt   search related domain(s) by TLDs
-   -asd-domain-certso SO1,SO2,...|input.txt             search domain(s) belonging to given subject orgnanization(s)
+   -asd-pivot-query OQL -field FIELD                    search unique value(s) for a given field from an OQL query
+   -asd-bootstrap-certso-wildcard KEYWORD1,KEYWORD2,...|input.txt  search domain(s) using given keyword(s)
+   -asd-domain-tld DOMAIN1,DOMAIN2,...|input.txt        search related domain(s) by TLDs
+   -asd-domain-certso SO1,SO2,...|input.txt             search domain(s) belonging to given subject organization(s)
    -asd-domain-wildcard DOMAIN1,DOMAIN2,...|input.txt   search domain(s) matching given wildcard(s)
+   -asd-domain-exist DOMAIN1,DOMAIN2,...|input.txt      search domain(s) existing in ONYPHE
+   -asd-web-subdomain-domain DOMAIN1,DOMAIN2,...|input.txt  search subdomain(s) from outgoing links found in Web pages matching given domain(s)
    -asd-certso-domain DOMAIN1,DOMAIN2,...|input.txt     search subject organization(s) belonging to given domain(s)
    -asd-certso-wildcard SO1,SO2,...|input.txt           search subject organization(s) matching given wildcard(s)
    -asd-org-inventory INVENTORY.txt                     search hosting organization(s) for given inventory data
+   -asd-ip-domain DOMAIN1,DOMAIN2,...|input.txt         search ip(s) belonging to given domain(s)
+   -asd-ip-certso SO1,SO2,...|input.txt                 search ip(s) belonging to given subject organization(s)
    -asd-ip-inventory INVENTORY.txt                      search ip(s) for given inventory data
    -asd-subnet-inventory INVENTORY.txt                  search subnet(s) belonging to given inventory data
    -asd-vhost-inventory INVENTORY.txt                   search forward(s) for given inventory data
@@ -540,10 +579,11 @@ ASD APIs:
 
    WARNING: the following APIs will execute DNS requests:
 
-   -asd-dns-domain-ns DOMAIN1,DOMAIN2,...|input.txt     search related domain(s) by using nameservers
-   -asd-dns-domain-mx DOMAIN1,DOMAIN2,...|input.txt     search related domain(s) by using MX records
-   -asd-dns-domain-soa DOMAIN1,DOMAIN2,...|input.txt    search related domain(s) by using SOA records
-   -asd-dns-domain-exist DOMAIN1,DOMAIN2,...|input.txt  search existing domain(s)
+   -asd-dns-domain-ns DOMAIN1,DOMAIN2,...|input.txt        search related domain(s) by using NS records
+   -asd-dns-domain-mx DOMAIN1,DOMAIN2,...|input.txt        search related domain(s) by using MX records
+   -asd-dns-domain-soa DOMAIN1,DOMAIN2,...|input.txt       search related domain(s) by using SOA records
+   -asd-dns-domain-exist DOMAIN1,DOMAIN2,...|input.txt     search existing domain(s)
+   -asd-dns-domain-ns-exist DOMAIN1,DOMAIN2,...|input.txt  search existing domain(s)
 
 EOF
 ;

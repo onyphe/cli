@@ -1,5 +1,5 @@
 #
-# $Id: Proc.pm,v cfbea05b0bc4 2025/01/28 15:06:19 gomor $
+# $Id: Proc.pm,v 23d8bc285bd6 2025/05/09 11:29:00 gomor $
 #
 package OPP::Proc;
 use strict;
@@ -133,6 +133,7 @@ sub delete {
       my $leaf = $split->[1];
       # Delete at the leaf level:
       if ($root !~ m{^_} && defined($leaf)) {
+      #if (defined($leaf)) {
          my @keep = ();
          for my $this (@{$flat->{$root}}) {
             delete $this->{$leaf};
@@ -149,11 +150,13 @@ sub delete {
       }
       # Or the complete root field when asked for:
       elsif ($root !~ m{^_}) {
+      #else {
          delete $flat->{$root};
       }
    }
    # Handle standard fields:
    elsif ($field !~ m{^_}) {
+   #elsif ($field !~ m{^_}) {
       delete $flat->{$field};
    }
 

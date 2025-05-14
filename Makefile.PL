@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 689580a0e0f8 2023/07/17 09:34:26 gomor $
+# $Id: Makefile.PL,v 604fb44b35f9 2025/03/27 09:23:31 gomor $
 #
 use strict;
 use warnings;
