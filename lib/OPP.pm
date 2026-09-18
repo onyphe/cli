@@ -1,5 +1,5 @@
 #
-# $Id: OPP.pm,v cfbea05b0bc4 2025/01/28 15:06:19 gomor $
+# $Id: OPP.pm,v c428c9f3dc81 2025/10/01 13:01:39 gomor $
 #
 package OPP;
 use strict;
@@ -25,6 +25,7 @@ use Data::Dumper;
 use Text::ParseWords;
 use JSON::XS qw(encode_json decode_json);
 use Tie::IxHash;
+use Net::IP;
 
 #
 # Check given field is of nested kind:
@@ -399,13 +400,31 @@ sub process_as_perl {
    return $self->pipeline($input, $opp);
 }
 
+sub ip_in_network {
+   my $self = shift;
+   my ($ip, $network) = @_;
+
+   croak("ip_in_network: need ip argument") unless defined($ip);
+   croak("ip_in_network: need network argument") unless defined($network);
+
+   my $ip1 = Net::IP->new($ip) or return;  # Just return on invalid value, no warning
+   my $net1 = Net::IP->new($network) or return;  # Just return on invalid value, no warning
+
+   my $r = $ip1->overlaps($net1) or return;  # Just return on error, no warning
+   if ($r == $IP_A_IN_B_OVERLAP) {
+      return 1;
+   }
+
+   return 0;
+}
+
 1;
 
 __END__
 
 =head1 NAME
 
-OPP - ONYPHE Processing Pipeline
+OPP - ONYPHE Processing Pipeline base class
 
 =head1 SYNOPSIS
 

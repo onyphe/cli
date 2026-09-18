@@ -1,12 +1,32 @@
 Revision history for Perl extension Onyphe.
 
+4.20.1 Fri 18 Sep 15:42:22 CEST 2026
+  - New: onyphe: -asd-dns-domain-mstenantid API endpoint
+  - Bugfix: Onyphe::OPP::Proc::Allowlist/Blocklist: cidr option was not working
+  - New: Onyphe::OPP::Proc::Allowlist/Blocklist: support for regexp option
+  - Update: Onyphe::Api::Asm: return results for processing with OPP.
+  - Update: Onyphe::Api::Asm: supports -count param
+  - Update: Onyphe::Opp::Orlookup: exact searches now use hash index for faster searching
+  - Bugfix: Onyphe::Opp::Orlookup: fixed handling of cidr parameter
+  - New: Onyphe::OPP:Proc::Andlookup: supports lookup file with multiple fields that MUST match
+  - Update: onyphe: -full 1 -asm-inventory-all, outputs all json fields returned by API
+
+4.20.0 Wed 13 May 14:59:05 CEST 2026
+  - New: Onyphe::Api::Asm: new design for interacting with ONYPHE APIs
+  - New: onyphe: -asm-inventory-all, -asm-inventory-addall, -asm-inventory-delall APIs
+
+4.19.2 Mon 14 Oct 10:44:18 CEST 2025
+  - Bugfix: Onyphe::Opp::Proc::Orlookup: check an IPv4 address is valid
+  - Update: verbose mode must be set to 2 for debug messages
+  - Update: use ip_in_network() from OPP base class when comparing IPs vs networks
+
 4.19.1 Wed 14 May 09:41:31 CEST 2025
-   - WARNING: ASD APIs are still BETA and interface may be subject to change
-   - Bugfix: onyphe: oql | opl split: splits on first pipe outside of double-quotes in order to allow for -regexp functions
-   - Bugfix: Onyphe::Opp::Proc: fixed handling of some nested fields
-   - Bugfix: Onyphe::Api: use UTF-8 mode when reading files
-   - Update: onyphe: -verbose 1 for some ASD APIs
-   - New: Onyphe::Api: Bootstrap Certso Wildcard, Ip Domain, IP Certso, Web Subdomain Domain ASD APIs
+  - WARNING: ASD APIs are still BETA and interface may be subject to change
+  - Bugfix: onyphe: oql | opl split: splits on first pipe outside of double-quotes in order to allow for -regexp functions
+  - Bugfix: Onyphe::Opp::Proc: fixed handling of some nested fields
+  - Bugfix: Onyphe::Api: use UTF-8 mode when reading files
+  - Update: onyphe: -verbose 1 for some ASD APIs
+  - New: Onyphe::Api: Bootstrap Certso Wildcard, Ip Domain, IP Certso, Web Subdomain Domain ASD APIs
 
 4.19.0 Fri 14 Mar 16:23:17 CET 2025
   - WARNING: ASD APIs are still BETA and interface may be subject to change

@@ -1,5 +1,5 @@
 #
-# $Id: Blocklist.pm,v cfbea05b0bc4 2025/01/28 15:06:19 gomor $
+# $Id: Blocklist.pm,v 40927f2b857f 2026/06/27 07:40:48 gomor $
 #
 package OPP::Proc::Blocklist;
 use strict;
@@ -12,7 +12,6 @@ our $VERSION = '1.00';
 
 use File::Slurp qw(read_file);
 use Text::CSV_XS;
-use Net::IPv4Addr qw(ipv4_in_network);
 
 sub _load {
    my $self = shift;
@@ -63,6 +62,7 @@ sub _load {
 #
 # | blocklist blocklist.csv
 # | blocklist blocklist.csv cidr=ip
+# | blocklist blocklist.csv regexp=hostname
 #
 sub process {
    my $self = shift;
@@ -74,6 +74,11 @@ sub process {
    die("blocklist: file not found: $file\n") unless -f $file;
 
    my $cidr = $options->{cidr} || 'ip';  # Use ip field by default for cidr matches
+   my $regexp = $options->{regexp};  # No default
+   $cidr = $cidr->[0] if ref($cidr) eq 'ARRAY';
+   $regexp = $regexp->[0] if defined($regexp) && ref($regexp) eq 'ARRAY';
+   #print STDERR "*** cidr enable on $cidr field\n" if defined($cidr);
+   #print STDERR "*** regexp enable on $regexp field\n" if defined($regexp);
 
    my $r = $self->_load($file);
    my $csv = $r->[0];
@@ -98,8 +103,19 @@ sub process {
          if ($field eq $cidr) {  # CIDR match mode
             for my $v (@$values) {
                #print STDERR "*** match field [$field] vs v[$v]\n";
-               if (defined($line->{$field}) && ipv4_in_network($line->{$field}, $v)) {
+               if (defined($line->{$field}) && $self->ip_in_network($line->{$field}, $v)) {
                   $this_skip++;
+               }
+            }
+         }
+         # Regexp match mode
+         elsif (defined($regexp) && $field eq $regexp) {
+            for my $v (@$values) {
+               my $re = $line->{$field};
+               #print STDERR "*** match field [$field] vs v[$v] re[$re]\n";
+               if (defined($line->{$field}) && $v =~ m{$re}i) {
+                  $this_skip++;
+                  last;
                }
             }
          }

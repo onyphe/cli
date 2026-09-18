@@ -1,5 +1,5 @@
 #
-# $Id: Orlookup.pm,v cfbea05b0bc4 2025/01/28 15:06:19 gomor $
+# $Id: Orlookup.pm,v caa20920d882 2026/07/03 14:12:50 james $
 #
 package OPP::Proc::Orlookup;
 use strict;
@@ -12,7 +12,6 @@ our $VERSION = '1.00';
 
 use File::Slurp qw(read_file);
 use Text::CSV_XS;
-use Net::IPv4Addr qw(ipv4_in_network);
 use Data::Dumper;
 
 sub _load {
@@ -20,6 +19,7 @@ sub _load {
    my ($file) = @_;
 
    my $csv = $self->state->value('csv', $self->idx);
+   my $index = $self->state->value('index', $self->idx);
    my $match_fields = $self->state->value('match_fields', $self->idx);
    my $lookup_field = $self->state->value('lookup_field', $self->idx);
 
@@ -50,11 +50,17 @@ sub _load {
          #print STDERR "count: $c\n";
          for my $idx (0..$c) {
             next unless (defined($line->[$idx]) && length($line->[$idx]));
-            push @$csv, { lc($match_fields->[$idx]) => lc($line->[$idx]), $lookup_field => $last };
+            my $field = lc($match_fields->[$idx]);
+            my $value = lc($line->[$idx]);
+            push @$csv, { $field => $value, $lookup_field => $last };
+            # Create an index for exact O(1) keyword searches
+            # Keep @$csv for CIDR searches
+            push @{$index->{$field}{$value}}, $last;
          }
       }
 
       $self->state->add('csv', $csv, $self->idx);
+      $self->state->add('index', $index, $self->idx);
       $self->state->add('match_fields', $match_fields, $self->idx);
       $self->state->add('lookup_field', $lookup_field, $self->idx);
       #print STDERR "match_fields[".Data::Dumper::Dumper($match_fields)."]\n";
@@ -63,7 +69,7 @@ sub _load {
 
    #print STDERR Data::Dumper::Dumper($csv)."\n";
 
-   return [ $csv, $match_fields, $lookup_field ];
+   return [ $csv, $index, $match_fields, $lookup_field ];
 }
 
 #
@@ -86,12 +92,14 @@ sub process {
    die("orlookup: file not given\n") unless defined $file;
    die("orlookup: file not found: $file\n") unless -f $file;
 
-   my $cidr = $options->{cidr} || 'ip';  # Use ip field by default for cidr matches
+   # Params are returned as an arrayref so get first entry in array
+   my $cidr = $options->{cidr} ? $options->{cidr}[0] : 'ip';  # Use ip field by default for cidr matches
 
    my $r = $self->_load($file);
    my $csv = $r->[0];
-   my $match_fields = $r->[1];
-   my $lookup_field = $r->[2];
+   my $index = $r->[1];
+   my $match_fields = $r->[2];
+   my $lookup_field = $r->[3];
 
    #print STDERR "match_fields[".Data::Dumper::Dumper($match_fields)."]\n";
    #print STDERR "lookup_field[$lookup_field]\n";
@@ -119,12 +127,11 @@ sub process {
             #print STDERR "field2[$field] v[$v]\n";
             for my $h (@$csv) {
                next unless $h->{$cidr};
+               #print STDERR "f:". $field."\n";
                #print STDERR "h:". Data::Dumper::Dumper($h)."\n";
+               #print STDERR "v:". $v."\n";
                if (defined($input->{$field}) && defined($h->{$field})) {
-                  #print STDERR "input:". $v."\n";
-                  #print STDERR "vs:".$h->{$field}."\n";
-                  if (ipv4_in_network($h->{$field}, $v)) {
-                     #print STDERR "Match\n";
+                  if ($self->ip_in_network($v, $h->{$field})) {
                      $self->set($input, $lookup_field, $h->{$lookup_field}, 1); # As ARRAY
                   }
                }
@@ -134,13 +141,11 @@ sub process {
       else {  # Exact match mode
          for my $v (@$values) {
             #print STDERR "field2[$field] v[$v]\n";
-            for my $h (@$csv) {
-               #print STDERR "h:". Data::Dumper::Dumper($h)."\n";
-               if (defined($h->{$field}) && lc($h->{$field}) eq lc($v)) {
-                  #print STDERR "match: field[$field] v[$v] lookup_field[$lookup_field]\n";
-                  $self->set($input, $lookup_field, $h->{$lookup_field}, 1) # As ARRAY
-                     if (defined($h->{$lookup_field}) && length($h->{$lookup_field}));
-               }
+            my $matches = $index->{$field}{lc($v)} or next;
+            for my $lookup_value (@$matches) {
+               #print STDERR "match: field[$field] v[$v] lookup_field[$lookup_field]\n";
+               $self->set($input, $lookup_field, $lookup_value, 1) # As ARRAY
+                  if (defined($lookup_value) && length($lookup_value));
             }
          }
       }

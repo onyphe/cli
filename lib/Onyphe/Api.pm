@@ -1,11 +1,11 @@
 #
-# $Id: Api.pm,v 177c0e7f0de9 2025/05/14 07:41:53 gomor $
+# $Id: Api.pm,v b20acfe7f21f 2026/08/27 12:58:52 gomor $
 #
 package Onyphe::Api;
 use strict;
 use warnings;
 
-our $VERSION = '4.19.1';
+our $VERSION = '4.20.1';
 
 use experimental qw(signatures);
 
@@ -53,7 +53,7 @@ sub _headers ($self, $apikey, $ct = undef) {
    my $username = $global->{api_unrated_email} || $self->username;
    if ($global->{api_unrated_endpoint} && $username) {
       print STDERR "VERBOSE: Using Unrated API endpoint: ".$global->{api_unrated_endpoint}.
-         ", with username: $username\n" if $self->verbose;
+         ", with username: $username\n" if $self->verbose > 1;
       if (!defined($username) || !defined($apikey)) {
          print STDERR "ERROR: need api_unrated_email & api_key settings\n"
             unless $self->silent;
@@ -161,7 +161,7 @@ sub request ($self, $api, $input = undef, $page = undef, $maxpage = undef, $para
       $path .= $args if $args;
       my $url = Mojo::URL->new($path);
 
-      print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+      print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
 
    RETRY:
       my $res;
@@ -208,7 +208,7 @@ sub request ($self, $api, $input = undef, $page = undef, $maxpage = undef, $para
       if (defined($input) && !$this_max_page) {
          print STDERR "ERROR: Request API call failed, no max_page found\n"
             unless $self->silent;
-         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose;
+         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose > 1;
          return;
       }
 
@@ -216,7 +216,7 @@ sub request ($self, $api, $input = undef, $page = undef, $maxpage = undef, $para
       if (defined($input) && !@$results) {
          print STDERR "ERROR: Request API call failed, no results found\n"
             unless $self->silent;
-         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose;
+         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose > 1;
          return;
       }
       $cb->($results, $cb_args);
@@ -270,7 +270,7 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
       $path .= $args if $args;
       my $url = Mojo::URL->new($path);
 
-      print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+      print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
 
    RETRY:
       my $res;
@@ -309,7 +309,7 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
       if (defined($input) && !$this_max_page) {
          print STDERR "ERROR: Request API call failed, no max_page found\n"
             unless $self->silent;
-         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose;
+         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose > 1;
          return;
       }
 
@@ -317,7 +317,7 @@ sub post_request ($self, $api, $input = undef, $page = undef, $maxpage = undef, 
       if (defined($input) && !@$results) {
          print STDERR "ERROR: Request API call failed, no results found\n"
             unless $self->silent;
-         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose;
+         print STDERR "VERBOSE: ".Data::Dumper::Dumper($json)."\n" if $self->verbose > 1;
          return;
       }
       $cb->($results, $cb_args);
@@ -441,7 +441,7 @@ sub stream ($self, $method, $api, $input, $params = undef, $cb = undef, $cb_args
    my $args = $self->_params($p);
    $path .= $args if $args;
 
-   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
 
    my $url = Mojo::URL->new($path);
 
@@ -457,7 +457,7 @@ sub stream ($self, $method, $api, $input, $params = undef, $cb = undef, $cb_args
    $tx->res->content->unsubscribe('read')->on(read => $self->_on_read($cb, $cb_args, \$buf));
 
    if (-f $input) {  # POST file content
-      print STDERR "VERBOSE: Reading file: $input\n" if $self->verbose;
+      print STDERR "VERBOSE: Reading file: $input\n" if $self->verbose > 1;
       $tx->req->content->asset(Mojo::Asset::File->new(path => $input));
    }
 
@@ -496,7 +496,7 @@ sub post_stream ($self, $method, $api, $input, $params = undef, $cb = undef, $cb
    my $args = $self->_params($p);
    $path .= $args if $args;
 
-   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
 
    my $url = Mojo::URL->new($path);
 
@@ -506,7 +506,7 @@ sub post_stream ($self, $method, $api, $input, $params = undef, $cb = undef, $cb
    $tx->res->content->unsubscribe('read')->on(read => $self->_on_read($cb, $cb_args, \$buf));
 
    if (-f $input) {  # POST file content
-      print STDERR "VERBOSE: Reading file: $input\n" if $self->verbose;
+      print STDERR "VERBOSE: Reading file: $input\n" if $self->verbose > 1;
       $tx->req->content->asset(Mojo::Asset::File->new(path => $input));
    }
 
@@ -615,7 +615,7 @@ sub alert ($self, $method, $api, $name, $oql, $email, $threshold = 0, $cb = unde
    my $path = $endpoint.$api;
    $path .= '?k='.$apikey;
 
-   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
 
    my $url = Mojo::URL->new($path);
 
@@ -674,7 +674,7 @@ sub alert_list ($self, $cb = undef, $cb_args = undef) {
 
 # $self->alert_add('test', 'category:datascan protocol:ssh', 'email@example.com', '>1000');
 sub alert_add ($self, $name, $oql, $email, $threshold = undef, $cb = undef, $cb_args = undef) {
-   if ($self->verbose) {
+   if ($self->verbose > 1) {
       print STDERR "VERBOSE: name: [$name]\n";
       print STDERR "VERBOSE: oql: [$oql]\n";
       print STDERR "VERBOSE: email: [$email]\n";
@@ -732,7 +732,7 @@ sub ondemand ($self, $method, $api, $param, $post, $cb = undef, $cb_args = undef
       $post->{ports} = $param->{ports} if defined $param->{ports};
    }
 
-   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
 
    my $url = Mojo::URL->new($path);
 
@@ -939,9 +939,9 @@ sub asd ($self, $method, $api, $param, $post, $cb = undef, $cb_args = undef) {
          if defined($param->{excludep});
    }
 
-   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose;
+   print STDERR "VERBOSE: Calling API: $path\n" if $self->verbose > 1;
    print STDERR "VERBOSE: Calling API with content: ".Data::Dumper::Dumper($post)."\n"
-      if $self->verbose;
+      if $self->verbose > 1;
 
    my $url = Mojo::URL->new($path);
 
@@ -1002,7 +1002,8 @@ sub _load_file ($self, $arg) {
    if (-f $arg) {  # If its a file, we create the list of values to push
       my $docs = $self->asd_load_input($arg);
       unless (defined($docs) && @$docs) {
-         print STDERR "VERBOSE: asd_load_input: failed from bad content or empty content\n";
+         print STDERR "VERBOSE: asd_load_input: failed from bad content or empty content\n"
+            if $self->verbose > 1;
          return;
       }
       $arg = $docs;
@@ -1113,6 +1114,12 @@ sub asd_dns_domain_soa ($self, $arg, $param = undef, $cb = undef, $cb_args = und
    return $self->asd('post', '/asd/dns/domain/soa', $param, { domain => $arg }, $cb, $cb_args);
 }
 
+sub asd_dns_domain_mstenantid ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
+   $arg = $self->_load_file($arg);
+   $arg = $self->_arg_from_field($arg, 'domain');
+   return $self->asd('post', '/asd/dns/domain/mstenantid', $param, { domain => $arg }, $cb, $cb_args);
+}
+
 sub asd_dns_domain_ns ($self, $arg, $param = undef, $cb = undef, $cb_args = undef) {
    $arg = $self->_load_file($arg);
    $arg = $self->_arg_from_field($arg, 'domain');
@@ -1183,7 +1190,7 @@ sub asd_load_input ($self, $input) {
    for (@lines) {
       chomp;
       unless ($_ =~ m{[=:]}) {  # Need a key:value pair
-         print STDERR "ERROR: asd_loas_input: invalid line found[$_], skipping\n";
+         print STDERR "ERROR: asd_load_input: invalid line found[$_], skipping\n";
          next;
       }
       s{(?:^\s*|\s*)$}{}g;
@@ -1195,7 +1202,7 @@ sub asd_load_input ($self, $input) {
    }
 
    print STDERR "VERBOSE: loaded ASD file: $input: ".Data::Dumper::Dumper($docs)."\n"
-      if $self->verbose;
+      if $self->verbose > 1;
 
    return $docs;
 }
@@ -1210,7 +1217,7 @@ Onyphe::Api - ONYPHE API
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2025, ONYPHE SAS
+Copyright (c) 2026, ONYPHE SAS
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

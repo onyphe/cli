@@ -16,6 +16,8 @@ examples/summary.pl
 examples/user.pl
 lib/Class/Gomor/Array.pm
 lib/Class/Gomor.pm
+lib/Onyphe/Api/Asm.pm
+lib/Onyphe/Apic.pm
 lib/Onyphe/Api.pm
 lib/Onyphe.pm
 lib/OPP/Output.pm

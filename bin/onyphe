@@ -1,17 +1,19 @@
 #!/usr/bin/env perl
 #
-# $Id: onyphe,v 23d8bc285bd6 2025/05/09 11:29:00 gomor $
+# $Id: onyphe,v b20acfe7f21f 2026/08/27 12:58:52 gomor $
 #
 use strict;
 use warnings;
 
 use Getopt::Long;
 use Onyphe::Api;
+use Onyphe::Api::Asm;
 use OPP;
 use OPP::State;
 use OPP::Output;
 
 my $oa = Onyphe::Api->new;
+my $oasm = Onyphe::Api::Asm->new;
 my $opp = OPP->new;
 $opp->nested([ 'app.http.component', 'app.http.header', 'alert' ]);
 $opp->state(OPP::State->new->init);
@@ -106,12 +108,17 @@ GetOptions(
    "asd-dns-domain-ns=s" => \$lopts{'asd-dns-domain-ns'},
    "asd-dns-domain-mx=s" => \$lopts{'asd-dns-domain-mx'},
    "asd-dns-domain-soa=s" => \$lopts{'asd-dns-domain-soa'},
+   "asd-dns-domain-mstenantid=s" => \$lopts{'asd-dns-domain-mstenantid'},
    "asd-dns-domain-exist=s" => \$lopts{'asd-dns-domain-exist'},
    "asd-dns-domain-ns-exist=s" => \$lopts{'asd-dns-domain-ns-exist'},
    "asd-task-id=s" => \$lopts{'asd-task-id'},
    "asd-task-poll=s" => \$lopts{'asd-task-poll'},
    "asd-task-list" => \$lopts{'asd-task-list'},
-   "asd-task-kill=s" => \$lopts{'asd-task-kill'}
+   "asd-task-kill=s" => \$lopts{'asd-task-kill'},
+   # ASM APIs:
+   "asm-inventory-all" => \$lopts{'asm-inventory-all'},
+   "asm-inventory-delall" => \$lopts{'asm-inventory-delall'},
+   "asm-inventory-addall=s" => \$lopts{'asm-inventory-addall'},
 ) or exit(0);
 
 if ($lopts{help}) {
@@ -158,6 +165,7 @@ if (defined $arg) {
 }
 
 $oa->init($lopts{config}) or die("FATAL: cannot initialize Onyphe::Api\n");
+$oasm->init($lopts{config}) or die("FATAL: cannot initialize Onyphe::Api::Asm\n");
 
 # Override default values from config:
 $oa->config->{''}{api_size} = $lopts{size} if $lopts{size};
@@ -171,6 +179,8 @@ $oa->config->{''}{api_ondemand_key} = $lopts{key} if $lopts{key};
 my $asd_api_opt = undef;
 my $asd_api_func = undef;
 my $asd_api_value = undef;
+my $asm_api_opt = undef;
+my $asm_api_value = undef;
 for my $opt (keys %lopts) {
    if ($opt =~ m{^asd} && defined($lopts{$opt})) {
       $asd_api_opt = $opt;
@@ -179,9 +189,14 @@ for my $opt (keys %lopts) {
       $asd_api_value = $lopts{$opt};
       last;
    }
+   elsif ($opt =~ m{^asm} && defined($lopts{$opt})) {
+      $asm_api_opt = $opt;
+      $asm_api_value = $lopts{$opt};
+      last;
+   }
 }
 
-if ($oa->verbose) {
+if ($oa->verbose > 1) {
    print STDERR "VERBOSE: api_size: ".$oa->config->{''}{api_size}."\n";
    print STDERR "VERBOSE: api_maxpage: ".$oa->config->{''}{api_maxpage}."\n";
    print STDERR "VERBOSE: api_trackquery: ".$oa->config->{''}{api_trackquery}."\n";
@@ -479,6 +494,22 @@ elsif (defined($asd_api_opt)) {
       $oa->$asd_api_func($v, $params, $opp_cb, $opl);
    }
 }
+#
+# ASM APIs:
+#
+elsif (defined($asm_api_opt)) {
+   if ($asm_api_opt eq 'asm-inventory-all') {
+      $params->{full} = 1 if $lopts{full};
+      $params->{count} = 1 if $lopts{count};
+      $oasm->all($params, $opp_perl_cb, $opl);
+   }
+   elsif ($asm_api_opt eq 'asm-inventory-delall') {
+      $oasm->delall($params, $opp_perl_cb, $opl);
+   }
+   elsif ($asm_api_opt eq 'asm-inventory-addall') {
+      $oasm->addall($asm_api_value, $params, $opp_perl_cb, $opl);
+   }
+}
 else {
    usage();
 }
@@ -496,7 +527,7 @@ Usage: onyphe [options] [api] [api args]
 
 General options:
 
-   -verbose <0|1>                          verbosity level (default: 0)
+   -verbose <0|1|2>                        verbosity level (default: 0)
 
 API options:
 
@@ -582,8 +613,15 @@ ASD APIs:
    -asd-dns-domain-ns DOMAIN1,DOMAIN2,...|input.txt        search related domain(s) by using NS records
    -asd-dns-domain-mx DOMAIN1,DOMAIN2,...|input.txt        search related domain(s) by using MX records
    -asd-dns-domain-soa DOMAIN1,DOMAIN2,...|input.txt       search related domain(s) by using SOA records
+   -asd-dns-domain-mstenantid DOMAIN1,DOMAIN2,...|input.txt       search related domain(s) by using MS Tenant ID records
    -asd-dns-domain-exist DOMAIN1,DOMAIN2,...|input.txt     search existing domain(s)
    -asd-dns-domain-ns-exist DOMAIN1,DOMAIN2,...|input.txt  search existing domain(s)
+
+ASM APIs:
+
+   -asm-inventory-all                list all items in current ASM inventory
+   -asm-inventory-delall             delete all items from current ASM inventory
+   -asm-inventory-addall input.txt   add all items to current ASM inventory from an OQL-based input file
 
 EOF
 ;
@@ -601,7 +639,7 @@ ONYPHE - ONYPHE Command Line Interface
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2025, ONYPHE SAS
+Copyright (c) 2026, ONYPHE SAS
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

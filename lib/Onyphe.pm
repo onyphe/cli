@@ -1,11 +1,11 @@
 #
-# $Id: Onyphe.pm,v 177c0e7f0de9 2025/05/14 07:41:53 gomor $
+# $Id: Onyphe.pm,v 40927f2b857f 2026/06/27 07:40:48 gomor $
 #
 package Onyphe;
 use strict;
 use warnings;
 
-our $VERSION = '4.19.1';
+our $VERSION = '4.20.1';
 
 use experimental qw(signatures);
 
@@ -44,9 +44,12 @@ sub init ($self, $file = undef) {
    $config->{''}{api_ondemand_endpoint} ||= $config->{''}{api_endpoint};
    $config->{''}{api_asd_endpoint} ||= $config->{''}{api_endpoint};
 
+   $self->verbose(0);
+
    if ($self->verbose) {
       for my $k (keys %{$config->{''}}) {
-         print STDERR "VERBOSE: config: $k => ".$config->{''}{$k}."\n";
+         print STDERR "VERBOSE: config: $k => ".$config->{''}{$k}."\n"
+            if $self->verbose > 1;
       }
    }
 
@@ -69,7 +72,7 @@ Onyphe - ONYPHE base class
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2025, ONYPHE SAS
+Copyright (c) 2026, ONYPHE SAS
 
 You may distribute this module under the terms of The BSD 3-Clause License.
 See LICENSE file in the source distribution archive.

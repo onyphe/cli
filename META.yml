@@ -117,10 +117,16 @@ provides:
     version: '1.00'
   Onyphe:
     file: lib/Onyphe.pm
-    version: v4.19.1
+    version: v4.20.1
   Onyphe::Api:
     file: lib/Onyphe/Api.pm
-    version: v4.19.1
+    version: v4.20.1
+  Onyphe::Api::Asm:
+    file: lib/Onyphe/Api/Asm.pm
+    version: v4.20.1
+  Onyphe::Apic:
+    file: lib/Onyphe/Apic.pm
+    version: v4.20.1
 requires:
   Carp: '0'
   Config::INI::Tiny: '0'
@@ -130,6 +136,7 @@ requires:
   JSON::XS: '0'
   LWP::Protocol::https: '0'
   Mojolicious: '0'
+  Net::IP: '0'
   Net::IPv4Addr: '0'
   Regexp::IPv4: '0'
   Regexp::IPv6: '0'
@@ -139,5 +146,5 @@ requires:
   Tie::IxHash: '0'
 resources:
   license: http://opensource.org/licenses/BSD-3-Clause
-version: v4.19.1
+version: v4.20.1
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

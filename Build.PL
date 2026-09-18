@@ -1,5 +1,5 @@
 #
-# $Id: Build.PL,v 604fb44b35f9 2025/03/27 09:23:31 gomor $
+# $Id: Build.PL,v cdaf87044eb5 2025/10/02 06:11:02 gomor $
 #
 use strict;
 use warnings;
@@ -27,6 +27,7 @@ my $builder = Module::Build->new(
       'Regexp::IPv4' => 0,
       'Regexp::IPv6' => 0,
       'Text::CSV_XS' => 0,
+      'Net::IP' => 0,
    },
    configure_requires => {
       'Module::Build' => 0,

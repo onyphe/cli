@@ -1,5 +1,5 @@
 #
-# $Id: Lookup.pm,v cfbea05b0bc4 2025/01/28 15:06:19 gomor $
+# $Id: Lookup.pm,v c428c9f3dc81 2025/10/01 13:01:39 gomor $
 #
 package OPP::Proc::Lookup;
 use strict;
@@ -12,7 +12,6 @@ our $VERSION = '1.00';
 
 use File::Slurp qw(read_file);
 use Text::CSV_XS;
-use Net::IPv4Addr qw(ipv4_in_network);
 use Data::Dumper;
 
 sub _load {
@@ -106,7 +105,7 @@ sub process {
       if ($field eq $cidr) {  # CIDR match mode
          for my $v (@$values) {
             for my $this (keys %{$csv->{$cidr}}) {
-               if (ipv4_in_network($this, $v)) {
+               if ($self->ip_in_network($this, $v)) {
                   for my $k (keys %{$csv->{$field}{$this}}) {
                      $self->set($input, $k, $csv->{$field}{$this}{$k}, 1);  # As ARRAY
                   }
