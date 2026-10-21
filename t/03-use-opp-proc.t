@@ -1,5 +1,5 @@
 use Test;
-BEGIN { plan(tests => 27) }
+BEGIN { plan(tests => 28) }
 
 ok(mytest->('OPP::Proc::Uniq'), 1, $@);
 ok(mytest->('OPP::Proc::Dedup'), 1, $@);
@@ -23,6 +23,7 @@ ok(mytest->('OPP::Proc::Discovery'), 1, $@);
 ok(mytest->('OPP::Proc::Splitsubnet'), 1, $@);
 ok(mytest->('OPP::Proc::Regex'), 1, $@);
 ok(mytest->('OPP::Proc::Lookup'), 1, $@);
+ok(mytest->('OPP::Proc::Orlookup'), 1, $@);
 ok(mytest->('OPP::Proc::Blocklist'), 1, $@);
 ok(mytest->('OPP::Proc::Allowlist'), 1, $@);
 ok(mytest->('OPP::Proc::Addfield'), 1, $@);

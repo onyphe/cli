@@ -1,5 +1,10 @@
 Revision history for Perl extension Onyphe.
 
+4.20.2 Wed 21 Oct 14:27:49 CEST 2026
+   - Bugfix: Onyphe::OPP: use __SUB__ i/o creating a reference cycle from $sub, fixing a memleak
+   - Bugfix: Onyphe::OPP: use $pos to also have a position index in cmd to avoid collision from multiple call to same procs with same args
+   - Bugfix: Onyphe::OPP: don't use eval() to load a proc, fixing a code execution vuln
+
 4.20.1 Fri 18 Sep 15:42:22 CEST 2026
   - New: onyphe: -asd-dns-domain-mstenantid API endpoint
   - Bugfix: Onyphe::OPP::Proc::Allowlist/Blocklist: cidr option was not working

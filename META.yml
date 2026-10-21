@@ -21,7 +21,7 @@ provides:
     version: '1.03'
   OPP:
     file: lib/OPP.pm
-    version: '1.00'
+    version: '1.01'
   OPP::Output:
     file: lib/OPP/Output.pm
     version: '1.00'
@@ -117,7 +117,7 @@ provides:
     version: '1.00'
   Onyphe:
     file: lib/Onyphe.pm
-    version: v4.20.1
+    version: v4.20.2
   Onyphe::Api:
     file: lib/Onyphe/Api.pm
     version: v4.20.1
@@ -146,5 +146,5 @@ requires:
   Tie::IxHash: '0'
 resources:
   license: http://opensource.org/licenses/BSD-3-Clause
-version: v4.20.1
+version: v4.20.2
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

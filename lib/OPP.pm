@@ -1,13 +1,14 @@
 #
-# $Id: OPP.pm,v c428c9f3dc81 2025/10/01 13:01:39 gomor $
+# $Id: OPP.pm,v 80c3d6c68e4b 2026/10/06 12:44:52 gomor $
 #
 package OPP;
 use strict;
 use warnings;
 
-our $VERSION = '1.00';
-
+our $VERSION = '1.01';
 our $debug = 0;
+
+use feature qw(current_sub);
 
 use Class::Gomor::Array;
 use base qw(Class::Gomor::Array);
@@ -78,13 +79,16 @@ sub flatten {
    my @new = ();
    for my $doc (@$docs) {
       my $new = { __opp_flatten => 1 };
-      my $sub; $sub = sub {
+      # NOTE: using __SUB__ to avoid memleak from a reference cycle in regards to using $sub
+      # within $sub itself. The closure captures $sub, and $sub holds the closure.
+      # That is a reference cycle, so Perl's refcounting never frees it
+      my $sub = sub {
          my ($doc, $field) = @_;
 
          for my $k (keys %$doc) {
             my $this_field = defined($field) ? "$field.$k" : $k;
             if (ref($doc->{$k}) eq 'HASH') {
-               $sub->($doc->{$k}, $this_field);
+               __SUB__->($doc->{$k}, $this_field);
             }
             else {
                $new->{$this_field} = $doc->{$k};
@@ -109,7 +113,11 @@ my $tie = sub {
    return \%res;
 };
 
-my $order; $order = sub {
+# NOTE: using __SUB__ to avoid memleak from a reference cycle in regards to using $sub
+# within $sub itself. The closure captures $sub, and $sub holds the closure.
+# That is a reference cycle, so Perl's refcounting never frees it
+#my $order; $order = sub {
+my $order = sub {
    my ($h) = @_;
 
    my $tie = $tie->($h);
@@ -118,14 +126,16 @@ my $order; $order = sub {
       next unless defined $k;
       next unless defined $h->{$k};
       if (ref($h->{$k}) eq 'HASH') {
-         my $this_tie = $order->($h->{$k});
+         #my $this_tie = $order->($h->{$k});
+         my $this_tie = __SUB__->($h->{$k});
          $tie->{$k} = $this_tie;
       }
       elsif (ref($h->{$k} eq 'ARRAY')) {
          my @a = ();
          for (@{$h->{$k}}) {
             next unless ref($_) eq 'HASH';
-            my $this_tie = $order->($_);
+            #my $this_tie = $order->($_);
+            my $this_tie = __SUB__->($_);
             push @a, $this_tie;
          }
          $h->{$k} = \@a if @a;
@@ -193,6 +203,13 @@ sub unflatten {
    return \@new;
 }
 
+
+# Used to make the link from one given cmd to its internal state ID. Issue
+# is that if we call multiple pipeone() with same cmd (like orlookup) but with
+# different parameters, they will all end up using idx = 0 for their state. And
+# a collision occurs.
+my %cmd_to_idx = ();
+
 sub pipeone {
    my $self = shift;
    my ($input, $opp) = @_;
@@ -208,28 +225,40 @@ sub pipeone {
 
    print STDERR "pipeone: cmdlist[@cmd] count[".scalar(@cmd)."]\n" if $debug;
 
-   my $idx = 0;
+   # Never inherit docs left over by a previous aborted call:
+   $self->output->flush;
    $self->output->add($self->flatten($input));
+
+   my $pos = 0;
    for my $this (@cmd) {
       print STDERR "pipeone: cmd[$this]\n" if $debug;
       my @proc = $this =~ m{^(\S+)(?:\s+(.+))?$};
       if (! defined($proc[0])) {
          print STDERR "pipeone: parse failed for [$this]\n" if $debug;
-         return;
+         next;
+      }
+      unless ($proc[0] =~ m{^\w+$}) {
+         print STDERR "pipeone: invalid proc [$proc[0]]\n" if $debug;
+         next;
       }
 
-      # Load proc
+      # Stable across calls, but distinct for identical cmds at different positions:
+      my $key = $pos++."\0".$this;
+      $cmd_to_idx{$key} = keys %cmd_to_idx unless defined($cmd_to_idx{$key});
+      my $idx = $cmd_to_idx{$key};
+
+      # Load proc without string eval:
       my $module = 'OPP::Proc::'.ucfirst(lc($proc[0]));
-      eval("use $module;");
-      if ($@) {
-         chomp($@);
-         print STDERR "pipeone: use proc failed [$proc[0]]: $@\n";
-         return;
+      (my $file = "$module.pm") =~ s{::}{/}g;
+      unless (eval { require $file; 1 }) {
+         chomp(my $err = $@);
+         print STDERR "pipeone: use proc failed [$proc[0]]: $err\n";
+         next;
       }
       my $proc = $module->new;
       if (!defined($proc)) {
          print STDERR "pipeone: load proc failed [$proc[0]]\n";
-         return;
+         next;
       }
       $proc->idx($idx);
       $proc->nested($self->nested);
@@ -242,11 +271,10 @@ sub pipeone {
 
       print STDERR "pipeone: proc[$proc]\n" if $debug;
 
-      for my $input (@{$self->output->docs}) {
-         $proc->process($input);
+      for (@{$self->output->docs}) {
+         $proc->process($_);
       }
       $self->output->docs($proc->output->docs);
-      $idx++;
    }
 
    if (defined($self->output->docs)) {

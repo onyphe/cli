@@ -51,7 +51,7 @@
       },
       "OPP" : {
          "file" : "lib/OPP.pm",
-         "version" : "1.00"
+         "version" : "1.01"
       },
       "OPP::Output" : {
          "file" : "lib/OPP/Output.pm",
@@ -179,7 +179,7 @@
       },
       "Onyphe" : {
          "file" : "lib/Onyphe.pm",
-         "version" : "v4.20.1"
+         "version" : "v4.20.2"
       },
       "Onyphe::Api" : {
          "file" : "lib/Onyphe/Api.pm",
@@ -200,6 +200,6 @@
          "http://opensource.org/licenses/BSD-3-Clause"
       ]
    },
-   "version" : "v4.20.1",
+   "version" : "v4.20.2",
    "x_serialization_backend" : "JSON::PP version 4.06"
 }
