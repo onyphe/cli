@@ -4,7 +4,7 @@ APIKEY=$1
 
 if [[ -z $APIKEY ]]
 then
-   echo 'ERROR: please provide your API key as a parameter like:'
+   echo 'ERROR: please provide your API key as a parameter like this:'
    echo './install.sh MY_API_KEY'
    exit 1
 fi
@@ -14,7 +14,7 @@ then
    echo "*** Installing dependencies for Ubuntu/Debian/Kali..."
    sudo apt-get install cpanminus libmojolicious-perl libtie-ixhash-perl
    sudo apt-get install liblwp-protocol-https-perl libjson-xs-perl libfile-slurp-perl
-   sudo apt-get install libregexp-ipv6-perl libtext-csv-xs-perl
+   sudo apt-get install libregexp-ipv6-perl libtext-csv-xs-perl libnet-ip-perl
    sudo cpanm -n Config::INI::Tiny Text::ParseWords Net::IPv4Addr Regexp::IPv4
    echo "*** Installing dependencies for Ubuntu/Debian/Kali...done"
    echo ''
@@ -57,7 +57,7 @@ then
 else
    if [[ ! -f ~/.onyphe.ini ]]
    then
-      echo "*** Creating .onyphe.ini squeleton..."
+      echo "*** Creating .onyphe.ini skeleton..."
       echo '# General APIs:' > ~/.onyphe.ini
       echo 'api_endpoint = https://www.onyphe.io/api/v2' >> ~/.onyphe.ini
       echo "api_key = $APIKEY" >> ~/.onyphe.ini
@@ -80,7 +80,7 @@ else
       echo '#api_trackquery = 1' >> ~/.onyphe.ini
       echo '#api_calculated = 1' >> ~/.onyphe.ini
       echo '#api_keepalive = 0' >> ~/.onyphe.ini
-      echo "*** Creating .onyphe.ini squeleton...done"
+      echo "*** Creating .onyphe.ini skeleton...done"
       echo ''
    fi
    echo "ERROR: System unknown, can't install automatically:"
